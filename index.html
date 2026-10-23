@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f3f5f8">
+<title>English Coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,700&display=swap">
+<style>
+/* Layout: pantalla única a toda altura; barra arriba, chat en el centro, mandos al alcance del pulgar abajo */
+:root {
+  --bg: #f3f5f8; --surface: #ffffff; --fg: #18202b; --muted: #5a6577; --line: #d9dee6;
+  --accent: #2346c4; --accent-fg: #ffffff; --tutor: #e6ebf7; --me: #2346c4; --me-fg: #ffffff;
+  --rec: #c62a3a; --fix-bg: #fff4dc; --fix-fg: #6b4700; --bad: #b3261e;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11151c; --surface: #1a2029; --fg: #e8ecf2; --muted: #9aa5b6; --line: #2c3442;
+  --accent: #7b96ff; --accent-fg: #0d1222; --tutor: #222a38; --me: #3552c9; --me-fg: #ffffff;
+  --rec: #ff6b78; --fix-bg: #3a2f17; --fix-fg: #f4d08a; --bad: #ff8a80; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #11151c; --surface: #1a2029; --fg: #e8ecf2; --muted: #9aa5b6; --line: #2c3442;
+  --accent: #7b96ff; --accent-fg: #0d1222; --tutor: #222a38; --me: #3552c9; --me-fg: #ffffff;
+  --rec: #ff6b78; --fix-bg: #3a2f17; --fix-fg: #f4d08a; --bad: #ff8a80; color-scheme: dark }
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { background: var(--bg); color: var(--fg); font: 17px/1.5 var(--body); }
+[hidden] { display: none !important; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+button:disabled { opacity: .5; cursor: default; }
+
+#app { height: 100%; display: flex; flex-direction: column; max-width: 40rem; margin: 0 auto; }
+.pad { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+.bar { display: flex; align-items: center; gap: 12px; padding-block: 10px; border-bottom: 1px solid var(--line); }
+.bar h1 { font: 700 1.3rem/1.1 var(--display); margin: 0; }
+.bar .meta { display: flex; gap: 8px; align-items: center; flex: 1; min-width: 0; flex-wrap: wrap; }
+.chip { font-size: .78rem; font-weight: 700; letter-spacing: .04em; padding: 3px 9px; border-radius: 99px; background: var(--tutor); color: var(--muted); }
+.icon-btn { min-width: 48px; min-height: 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-size: 1.3rem; }
+
+#chat { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-block: 16px; overscroll-behavior: contain; }
+.empty { margin: auto 0; display: grid; gap: 8px; color: var(--muted); }
+.empty h2 { font: 700 1.5rem/1.2 var(--display); color: var(--fg); margin: 0; text-wrap: balance; }
+.empty p { margin: 0; max-width: 34ch; }
+
+.msg { max-width: 88%; padding: 10px 14px; border-radius: 16px; overflow-wrap: anywhere; display: grid; gap: 6px; }
+.msg.tutor { align-self: flex-start; background: var(--tutor); border-bottom-left-radius: 4px; }
+.msg.me { align-self: flex-end; background: var(--me); color: var(--me-fg); border-bottom-right-radius: 4px; }
+.msg.me.live { opacity: .7; }
+.msg .who { font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.msg .fix { background: var(--fix-bg); color: var(--fix-fg); border-radius: 10px; padding: 6px 10px; font-size: .95rem; }
+.msg .replay { justify-self: start; min-height: 40px; border: 0; background: transparent; color: var(--accent); font-weight: 700; padding: 0 4px; }
+.msg.error { align-self: stretch; max-width: none; background: transparent; border: 1px solid var(--bad); color: var(--bad); }
+.msg.error button { justify-self: start; min-height: 48px; border-radius: 10px; border: 1px solid var(--bad); background: var(--surface); color: var(--bad); padding: 0 16px; font-weight: 700; }
+
+.dock { border-top: 1px solid var(--line); background: var(--bg); padding-block: 10px 14px; display: grid; gap: 8px; }
+.status { margin: 0; min-height: 1.5em; text-align: center; color: var(--muted); font-size: .95rem; }
+.dock-row { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 10px; align-items: stretch; }
+.side-btn { min-height: 64px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); font-weight: 700; font-size: .9rem; }
+.mic { min-height: 80px; border-radius: 20px; border: 0; background: var(--accent); color: var(--accent-fg); font: 700 1.2rem/1.2 var(--body); }
+.mic.listening { background: var(--rec); }
+@media (prefers-reduced-motion: no-preference) {
+  .mic.listening { animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .82; } }
+}
+#type-form { display: flex; gap: 8px; }
+#type-form input { flex: 1; min-width: 0; min-height: 52px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); padding: 0 12px; }
+#type-form button { min-height: 52px; border-radius: 12px; border: 0; background: var(--accent); color: var(--accent-fg); font-weight: 700; padding: 0 16px; }
+
+#settings { position: fixed; inset: 0; background: var(--bg); overflow-y: auto; z-index: 5;
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+#settings .inner { max-width: 40rem; margin: 0 auto; display: grid; gap: 18px; padding-block: 10px 32px; }
+#settings h2 { font: 700 1.3rem/1.1 var(--display); margin: 0; flex: 1; }
+#settings .head { display: flex; align-items: center; gap: 12px; }
+fieldset { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 14px; margin: 0; display: grid; gap: 12px; min-width: 0; }
+legend { font-weight: 700; padding: 0 6px; }
+label { display: grid; gap: 4px; font-size: .9rem; color: var(--muted); }
+fieldset input, fieldset select { min-height: 48px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); padding: 8px 10px; width: 100%; }
+.hint { margin: 0; font-size: .88rem; color: var(--muted); }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+.row > button { flex: 1 1 8rem; min-height: 52px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-weight: 700; }
+.row > button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="bar pad">
+    <div class="meta">
+      <h1>English Coach</h1>
+      <span id="mode-chip" class="chip">…</span>
+      <span id="turn-chip" class="chip" hidden></span>
+    </div>
+    <button id="btn-settings" class="icon-btn" aria-label="Ajustes">⚙</button>
+  </header>
+
+  <main id="chat" class="pad" aria-live="polite">
+    <div id="empty" class="empty">
+      <h2>Habla en inglés con Sam</h2>
+      <p>Sam te propone un tema y te contesta en voz alta. Pulsa el micrófono para hablar y otra vez para enviar.</p>
+    </div>
+  </main>
+
+  <footer class="dock pad">
+    <p id="status" class="status"></p>
+    <form id="type-form" hidden>
+      <input id="type-input" type="text" autocomplete="off" placeholder="Escribe en inglés…" aria-label="Escribe tu mensaje">
+      <button type="submit">Enviar</button>
+    </form>
+    <div class="dock-row">
+      <button id="btn-type" class="side-btn">⌨<br>Escribir</button>
+      <button id="btn-main" class="mic">Empezar</button>
+      <button id="btn-new" class="side-btn">↺<br>Nueva</button>
+    </div>
+  </footer>
+</div>
+
+<section id="settings" hidden aria-labelledby="h-settings">
+  <div class="inner pad">
+    <div class="head">
+      <h2 id="h-settings">Ajustes</h2>
+      <button id="btn-close-settings" class="icon-btn" aria-label="Cerrar ajustes">✕</button>
+    </div>
+
+    <fieldset id="key-box">
+      <legend>API key de Anthropic</legend>
+      <label for="api-key">Se guarda solo en este móvil
+        <input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…">
+      </label>
+      <div class="row">
+        <button id="btn-save-key" class="primary">Guardar key</button>
+        <button id="btn-clear-key">Borrar key</button>
+      </div>
+      <p id="key-status" class="hint"></p>
+      <p class="hint">Créala en console.anthropic.com y ponle un límite de gasto mensual bajo.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Voz</legend>
+      <label for="accent">Acento (reconocimiento y voz de Sam)
+        <select id="accent">
+          <option value="en-US">Americano (en-US)</option>
+          <option value="en-GB">Británico (en-GB)</option>
+        </select>
+      </label>
+      <label for="voice-select">Voz de Sam
+        <select id="voice-select"><option value="">Automática</option></select>
+      </label>
+      <label for="rate">Velocidad: <span id="rate-out"></span>
+        <input id="rate" type="range" min="0.7" max="1.2" step="0.05">
+      </label>
+      <div class="row"><button id="btn-test-voice">🔊 Probar voz</button></div>
+    </fieldset>
+  </div>
+</section>
+
+<script>
+"use strict";
+
+// ================= Prompts =================
+const TUTOR_RULES = `You are Sam, a friendly English conversation tutor. The learner is a Spanish speaker at B1 level practising SPOKEN English.
+Rules:
+- Reply in 1-3 short sentences (max ~40 words), simple B1 vocabulary, then ONE open question to keep them talking.
+- Your reply will be read aloud: no lists, no emojis, no markdown.
+- If the learner made an important mistake, add ONE correction on a separate final line starting with "✎ " in the form: ✎ "what they said" → "better version". Skip it if the mistake is minor. Never correct more than one thing per turn.
+- Their text comes from speech recognition: ignore punctuation, capitalisation and obvious transcription glitches.
+- If they write in Spanish, help with the English phrase they need and invite them to say it.
+- Start of session: if REVIEW items are provided, first ask them to say 2-3 of those phrases correctly (give the Spanish meaning or a situation), one at a time, then move to the conversation.`;
+
+const KICKOFF = "(The learner has just opened a new free conversation session. Greet them briefly and propose one everyday topic such as work, travel or their weekend, or invite them to choose their own topic.)";
+
+// ================= Preferencias (localStorage) =================
+const prefs = {
+  defaults: { accent: "en-US", voiceURI: "", rate: 0.95 },
+  read() {
+    try { return { ...this.defaults, ...JSON.parse(localStorage.getItem("esc.prefs") || "{}") }; }
+    catch { return { ...this.defaults }; }
+  },
+  write(patch) {
+    const next = { ...this.read(), ...patch };
+    try { localStorage.setItem("esc.prefs", JSON.stringify(next)); } catch {}
+    return next;
+  },
+  apiKey() { try { return localStorage.getItem("esc.apiKey") || ""; } catch { return ""; } },
+  setApiKey(k) { try { k ? localStorage.setItem("esc.apiKey", k) : localStorage.removeItem("esc.apiKey"); } catch {} },
+};
+
+// ================= Adaptador de voz (Web Speech API) =================
+class VoiceError extends Error { constructor(code) { super(code); this.code = code; } }
+
+const voice = (() => {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const synth = "speechSynthesis" in window ? window.speechSynthesis : null;
+  let session = null;
+
+  function pickVoice() {
+    if (!synth) return null;
+    const { accent, voiceURI } = prefs.read();
+    const all = synth.getVoices();
+    return all.find(v => v.voiceURI === voiceURI)
+      || all.find(v => v.lang.replace("_", "-") === accent && v.localService)
+      || all.find(v => v.lang.replace("_", "-") === accent)
+      || all.find(v => v.lang.startsWith("en")) || null;
+  }
+
+  return {
+    canListen: !!SR,
+    canSpeak: !!synth,
+    englishVoices: () => synth ? synth.getVoices().filter(v => v.lang.startsWith("en")) : [],
+    onVoicesChanged(fn) { if (synth) synth.addEventListener("voiceschanged", fn); },
+
+    // Escucha hasta que se llame a stop(). Android corta el reconocimiento tras una pausa,
+    // así que se reinicia solo mientras el usuario no pulse «Enviar».
+    listen(onInterim) {
+      if (!SR) return Promise.reject(new VoiceError("unsupported"));
+      if (synth) synth.cancel();
+      return new Promise((resolve, reject) => {
+        let finals = "", lastInterim = "", stopped = false, failed = null, rec = null;
+        const finish = () => { session = null; resolve((finals || lastInterim).trim()); };
+        const start = () => {
+          rec = new SR();
+          rec.lang = prefs.read().accent;
+          rec.interimResults = true;
+          rec.continuous = false;
+          rec.onresult = (e) => {
+            let interim = "";
+            for (let i = e.resultIndex; i < e.results.length; i++) {
+              const r = e.results[i];
+              if (r.isFinal) finals = (finals + " " + r[0].transcript.trim()).trim();
+              else interim += r[0].transcript;
+            }
+            lastInterim = (finals + " " + interim).trim();
+            onInterim && onInterim(lastInterim);
+          };
+          rec.onerror = (e) => { if (e.error !== "no-speech" && e.error !== "aborted") failed = e.error; };
+          rec.onend = () => {
+            if (failed) { session = null; reject(new VoiceError(failed)); return; }
+            if (stopped) { finish(); return; }
+            try { start(); } catch { finish(); }
+          };
+          rec.start();
+        };
+        session = { stop() { stopped = true; try { rec.stop(); } catch { finish(); } } };
+        try { start(); } catch (e) { session = null; reject(new VoiceError("start-failed")); }
+      });
+    },
+    stop() { if (session) session.stop(); },
+
+    // Lee el texto; se resuelve al terminar (o al cancelarse).
+    speak(text) {
+      if (!synth || !text) return Promise.resolve();
+      synth.cancel();
+      return new Promise((resolve) => {
+        const u = new SpeechSynthesisUtterance(text);
+        const v = pickVoice();
+        const { accent, rate } = prefs.read();
+        if (v) { u.voice = v; u.lang = v.lang; } else u.lang = accent;
+        u.rate = rate;
+        let done = false;
+        const end = () => { if (!done) { done = true; clearTimeout(guard); resolve(); } };
+        // Chrome a veces no dispara onend: red de seguridad según la longitud
+        const guard = setTimeout(end, 4000 + text.length * 110 / rate);
+        u.onend = end; u.onerror = end;
+        synth.speak(u);
+      });
+    },
+    stopSpeaking() { if (synth) synth.cancel(); },
+  };
+})();
+
+// ================= Adaptador de IA =================
+class AiError extends Error { constructor(code, detail) { super(detail || code); this.code = code; this.detail = detail; } }
+
+const API_URL = "https://api.anthropic.com/v1/messages";
+const MODEL_CHAT = "claude-haiku-5-5";
+
+const aiApi = {
+  mode: "pwa",
+  async turn(rules, messages) {
+    const key = prefs.apiKey();
+    if (!key) throw new AiError("no_key");
+    let res;
+    try {
+      res = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": key,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true",
+        },
+        body: JSON.stringify({
+          model: MODEL_CHAT,
+          max_tokens: 1024,
+          system: rules,
+          messages,
+          output_config: { effort: "low" },
+        }),
+      });
+    } catch { throw new AiError("network"); }
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      const msg = data?.error?.message;
+      if (res.status === 401 || res.status === 403) throw new AiError("auth", msg);
+      if (res.status === 429) throw new AiError("rate_limited", msg);
+      if (res.status >= 500) throw new AiError("overloaded", msg);
+      throw new AiError("api", msg || `HTTP ${res.status}`);
+    }
+    if (data.stop_reason === "refusal") throw new AiError("refusal");
+    const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("").trim();
+    if (!text) throw new AiError("empty");
+    return text;
+  },
+};
+
+function makeArtifactAi(sample) {
+  return {
+    mode: "artifact",
+    // Sin system: las instrucciones van al principio del primer turno de usuario.
+    async turn(rules, messages) {
+      const input = messages.map((m, i) => i === 0 ? { role: "user", content: rules + "\n\n" + m.content } : m);
+      try {
+        const { text } = await sample(input, { modelTier: "quick", cache: false });
+        if (!text || !text.trim()) throw new AiError("empty");
+        return text.trim();
+      } catch (e) {
+        if (e instanceof AiError) throw e;
+        if (e && e.code === "rate_limited") throw new AiError("rate_limited");
+        if (e && e.code === "not_granted") throw new AiError("not_granted");
+        throw new AiError("api", e && e.message);
+      }
+    },
+  };
+}
+
+async function detectAi() {
+  if (window.claude && typeof window.claude.use === "function") {
+    try {
+      const sample = await window.claude.use("sample");
+      if (typeof sample === "function") return makeArtifactAi(sample);
+    } catch {}
+  }
+  return aiApi;
+}
+
+const AI_ERR_ES = {
+  no_key: "Falta la API key. Ábrela en Ajustes (⚙) y pégala.",
+  auth: "La API key no es válida o está revocada. Revísala en Ajustes.",
+  rate_limited: "Has llegado al límite de uso. Espera un minuto y pulsa Reintentar.",
+  overloaded: "El servicio está saturado. Reintenta en unos segundos.",
+  network: "No hay conexión. Comprueba la red y pulsa Reintentar.",
+  refusal: "Sam no ha querido responder a eso. Prueba a decirlo de otra forma.",
+  empty: "Sam no ha devuelto texto. Pulsa Reintentar.",
+  not_granted: "No has dado permiso para usar tu cuenta de Claude.",
+};
+
+const VOICE_ERR_ES = {
+  "not-allowed": "El micrófono está bloqueado. Permítelo en los ajustes del sitio de Chrome.",
+  "service-not-allowed": "Chrome no deja usar el reconocimiento de voz aquí.",
+  "audio-capture": "No se encuentra el micrófono.",
+  "network": "El reconocimiento de voz necesita conexión.",
+  "language-not-supported": "Ese acento no está disponible. Cambia el acento en Ajustes.",
+  unsupported: "Este navegador no reconoce voz. Usa Chrome en Android, o escribe.",
+  "start-failed": "No se ha podido activar el micrófono. Prueba otra vez.",
+};
+
+// ================= Sesión de conversación =================
+const $ = (id) => document.getElementById(id);
+let ai = aiApi;
+const state = { phase: "off", messages: [], turns: 0, liveBubble: null, wakeLock: null };
+
+function splitReply(reply) {
+  const lines = reply.split("\n").map(l => l.trim()).filter(Boolean);
+  const fix = lines.filter(l => l.startsWith("✎")).map(l => l.replace(/^✎\s*/, "")).join(" ");
+  const say = lines.filter(l => !l.startsWith("✎")).join(" ");
+  return { say, fix };
+}
+
+function scrollDown() { const c = $("chat"); c.scrollTop = c.scrollHeight; }
+
+function addBubble(kind, text) {
+  $("empty").hidden = true;
+  const el = document.createElement("div");
+  el.className = `msg ${kind}`;
+  const p = document.createElement("div");
+  p.textContent = text;
+  el.append(p);
+  $("chat").append(el);
+  scrollDown();
+  return el;
+}
+
+function addTutorBubble(say, fix) {
+  const el = addBubble("tutor", "");
+  el.textContent = "";
+  const who = document.createElement("span"); who.className = "who"; who.textContent = "Sam";
+  const p = document.createElement("div"); p.textContent = say;
+  el.append(who, p);
+  if (fix) { const f = document.createElement("div"); f.className = "fix"; f.textContent = "✎ " + fix; el.append(f); }
+  const b = document.createElement("button"); b.className = "replay"; b.textContent = "🔊 Repetir";
+  b.addEventListener("click", () => { if (state.phase === "idle") speakAndIdle(say); });
+  el.append(b);
+  scrollDown();
+}
+
+function addError(text, retry) {
+  const el = addBubble("error", text);
+  if (retry) {
+    const b = document.createElement("button"); b.textContent = "Reintentar";
+    b.addEventListener("click", () => { el.remove(); retry(); });
+    el.append(b);
+  }
+}
+
+function setPhase(phase, status = "") {
+  state.phase = phase;
+  const btn = $("btn-main");
+  btn.classList.toggle("listening", phase === "listening");
+  btn.disabled = phase === "thinking";
+  btn.textContent = {
+    off: "Empezar",
+    idle: voice.canListen ? "🎤 Hablar" : "⌨ Escribir",
+    listening: "■ Enviar",
+    thinking: "Sam está pensando…",
+    speaking: "⏭ Saltar",
+  }[phase];
+  $("status").textContent = status || {
+    off: "",
+    idle: voice.canListen ? "Pulsa para hablar." : "",
+    listening: "Te escucho. Pulsa «Enviar» al terminar.",
+    thinking: "",
+    speaking: "Sam está hablando.",
+  }[phase];
+  $("type-form").querySelector("button").disabled = phase === "thinking" || phase === "off";
+  const tc = $("turn-chip");
+  tc.hidden = state.turns === 0;
+  tc.textContent = `${state.turns} ${state.turns === 1 ? "turno" : "turnos"}`;
+}
+
+async function speakAndIdle(text) {
+  setPhase("speaking");
+  await voice.speak(text);
+  if (state.phase === "speaking") setPhase("idle");
+}
+
+async function tutorTurn() {
+  setPhase("thinking");
+  try {
+    const reply = await ai.turn(TUTOR_RULES, state.messages);
+    state.messages.push({ role: "assistant", content: reply });
+    const { say, fix } = splitReply(reply);
+    addTutorBubble(say, fix);
+    await speakAndIdle(say);
+  } catch (e) {
+    const msg = AI_ERR_ES[e.code] || `Error: ${e.message}`;
+    setPhase(state.messages.length > 1 ? "idle" : "off", "");
+    addError(msg, e.code === "no_key" || e.code === "auth" ? null : tutorTurn);
+    if (e.code === "no_key") openSettings();
+  }
+}
+
+function sendUser(text) {
+  text = text.trim();
+  if (!text) return;
+  addBubble("me", text);
+  const last = state.messages[state.messages.length - 1];
+  // Si el turno anterior falló, el mensaje del usuario sigue ahí: se junta para no repetir rol.
+  if (last && last.role === "user") last.content += "\n" + text;
+  else state.messages.push({ role: "user", content: text });
+  state.turns++;
+  tutorTurn();
+}
+
+async function startSession() {
+  state.messages = [{ role: "user", content: KICKOFF }];
+  state.turns = 0;
+  $("chat").querySelectorAll(".msg").forEach(m => m.remove());
+  try { state.wakeLock = await navigator.wakeLock?.request("screen"); } catch {}
+  await tutorTurn();
+}
+
+async function listen() {
+  setPhase("listening");
+  const live = addBubble("me live", "…");
+  try {
+    const text = await voice.listen((t) => { live.firstChild.textContent = t || "…"; scrollDown(); });
+    live.remove();
+    if (!text) { setPhase("idle", "No te he oído. Pulsa y prueba otra vez."); return; }
+    sendUser(text);
+  } catch (e) {
+    live.remove();
+    setPhase("idle", VOICE_ERR_ES[e.code] || `Error del micrófono: ${e.code}`);
+    if (e.code === "unsupported" || e.code === "not-allowed" || e.code === "service-not-allowed") $("type-form").hidden = false;
+  }
+}
+
+$("btn-main").addEventListener("click", () => {
+  switch (state.phase) {
+    case "off": startSession(); break;
+    case "idle":
+      if (voice.canListen) listen();
+      else { $("type-form").hidden = false; $("type-input").focus(); }
+      break;
+    case "listening": voice.stop(); break;
+    case "speaking": voice.stopSpeaking(); setPhase("idle"); break;
+  }
+});
+
+$("btn-type").addEventListener("click", () => {
+  const f = $("type-form");
+  f.hidden = !f.hidden;
+  if (!f.hidden) $("type-input").focus();
+});
+
+$("type-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (state.phase === "off" || state.phase === "thinking") return;
+  if (state.phase === "listening") voice.stop();
+  voice.stopSpeaking();
+  const text = $("type-input").value;
+  $("type-input").value = "";
+  sendUser(text);
+});
+
+$("btn-new").addEventListener("click", () => {
+  if (state.phase === "thinking") return;
+  if (state.phase === "listening") voice.stop();
+  voice.stopSpeaking();
+  startSession();
+});
+
+document.addEventListener("visibilitychange", async () => {
+  if (document.visibilityState === "visible" && state.wakeLock && state.phase !== "off") {
+    try { state.wakeLock = await navigator.wakeLock.request("screen"); } catch {}
+  }
+});
+
+// ================= Ajustes =================
+function fillVoices() {
+  const sel = $("voice-select"), { voiceURI } = prefs.read();
+  const opts = voice.englishVoices().map(v =>
+    `<option value="${v.voiceURI.replace(/"/g, "&quot;")}">${v.name.replace(/</g, "&lt;")} (${v.lang})</option>`);
+  sel.innerHTML = '<option value="">Automática</option>' + opts.join("");
+  sel.value = voiceURI;
+  if (sel.value !== voiceURI) sel.value = "";
+}
+
+function openSettings() {
+  const p = prefs.read();
+  $("key-box").hidden = ai.mode !== "pwa";
+  $("api-key").value = prefs.apiKey();
+  $("key-status").textContent = prefs.apiKey() ? "Hay una key guardada." : "Todavía no hay key.";
+  $("accent").value = p.accent;
+  $("rate").value = p.rate;
+  $("rate-out").textContent = `${Number(p.rate).toFixed(2)}×`;
+  fillVoices();
+  $("settings").hidden = false;
+}
+function closeSettings() { $("settings").hidden = true; }
+
+$("btn-settings").addEventListener("click", openSettings);
+$("btn-close-settings").addEventListener("click", closeSettings);
+$("btn-save-key").addEventListener("click", () => {
+  const k = $("api-key").value.trim();
+  if (!k.startsWith("sk-ant-")) { $("key-status").textContent = "Eso no parece una key de Anthropic: empieza por sk-ant-."; return; }
+  prefs.setApiKey(k);
+  $("key-status").textContent = "Key guardada en este móvil.";
+});
+$("btn-clear-key").addEventListener("click", () => {
+  prefs.setApiKey("");
+  $("api-key").value = "";
+  $("key-status").textContent = "Key borrada.";
+});
+$("accent").addEventListener("change", (e) => { prefs.write({ accent: e.target.value, voiceURI: "" }); fillVoices(); });
+$("voice-select").addEventListener("change", (e) => prefs.write({ voiceURI: e.target.value }));
+$("rate").addEventListener("input", (e) => {
+  prefs.write({ rate: Number(e.target.value) });
+  $("rate-out").textContent = `${Number(e.target.value).toFixed(2)}×`;
+});
+$("btn-test-voice").addEventListener("click", () => voice.speak("Hi, I'm Sam. What did you do last weekend?"));
+voice.onVoicesChanged(() => { if (!$("settings").hidden) fillVoices(); });
+
+// ================= Arranque =================
+setPhase("off");
+$("mode-chip").textContent = "…";
+detectAi().then((found) => {
+  ai = found;
+  $("mode-chip").textContent = ai.mode === "artifact" ? "Claude" : "API";
+  if (!voice.canListen) $("status").textContent = "Este navegador no reconoce voz: podrás escribir.";
+  else if (ai.mode === "pwa" && !prefs.apiKey()) $("status").textContent = "Antes de empezar, pega tu API key en Ajustes (⚙).";
+});
+</script>
+</body>
+</html>

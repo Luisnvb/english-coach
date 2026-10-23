@@ -1,0 +1,269 @@
+<title>Prueba de micrófono</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,700&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Layout: una columna estrecha para el pulgar; diagnóstico arriba, dos pruebas, veredicto copiable al final */
+:root {
+  --bg: #f3f5f8; --surface: #ffffff; --fg: #18202b; --muted: #5a6577; --line: #d9dee6;
+  --accent: #2346c4; --accent-fg: #ffffff; --rec: #c62a3a; --ok: #1d7a46; --bad: #b3261e; --warn: #9a6200;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11151c; --surface: #1a2029; --fg: #e8ecf2; --muted: #9aa5b6; --line: #2c3442;
+  --accent: #7b96ff; --accent-fg: #0d1222; --rec: #ff6b78; --ok: #5fd08f; --bad: #ff8a80; --warn: #f0b85a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #11151c; --surface: #1a2029; --fg: #e8ecf2; --muted: #9aa5b6; --line: #2c3442;
+  --accent: #7b96ff; --accent-fg: #0d1222; --rec: #ff6b78; --ok: #5fd08f; --bad: #ff8a80; --warn: #f0b85a; color-scheme: dark }
+
+body { background: var(--bg); color: var(--fg); font: 17px/1.5 var(--body); }
+main { max-width: 34rem; margin: 0 auto; display: grid; gap: 20px;
+  padding-block: 20px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1 { font: 700 1.75rem/1.15 var(--display); margin: 0; text-wrap: balance; }
+h2 { font: 700 1.15rem/1.2 var(--display); margin: 0; }
+.lede { margin: 6px 0 0; color: var(--muted); }
+section { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.step { font: 700 .75rem var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+dl { margin: 0; display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; }
+dt { color: var(--muted); }
+dd { margin: 0; font-weight: 700; text-align: right; }
+.ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); }
+
+button, select, textarea { font: inherit; color: inherit; }
+button { min-height: 56px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); padding: 0 16px; cursor: pointer; font-weight: 700; }
+button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-size: 1.1rem; }
+button.primary.recording { background: var(--rec); border-color: var(--rec); }
+button:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; }
+.row > * { flex: 1 1 10rem; }
+label { display: grid; gap: 4px; font-size: .9rem; color: var(--muted); }
+select, textarea { min-height: 48px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); padding: 8px 10px; width: 100%; box-sizing: border-box; }
+textarea { min-height: 80px; resize: vertical; }
+
+.transcript { min-height: 3.2em; padding: 12px; border-radius: 10px; background: var(--bg); font-size: 1.15rem; overflow-wrap: anywhere; }
+.transcript .interim { color: var(--muted); }
+.transcript:empty::before { content: "Aquí aparecerá lo que digas."; color: var(--muted); }
+.status { margin: 0; font-size: .95rem; }
+
+pre { margin: 0; padding: 12px; border-radius: 10px; background: var(--bg); font: 12.5px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 16rem; overflow-y: auto; }
+.verdict { display: grid; gap: 6px; }
+.verdict p { margin: 0; font-size: 1.05rem; }
+@media (prefers-reduced-motion: no-preference) {
+  button.primary.recording { animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .8; } }
+}
+</style>
+
+<main>
+  <header>
+    <h1>Prueba de micrófono</h1>
+    <p class="lede">Fase 0 del English Coach: comprueba si este visor deja usar el micrófono y la voz.</p>
+  </header>
+
+  <section aria-labelledby="h-diag">
+    <h2 id="h-diag">Qué ve este navegador</h2>
+    <dl>
+      <dt>Reconocimiento de voz</dt><dd id="d-sr">…</dd>
+      <dt>Síntesis de voz</dt><dd id="d-tts">…</dd>
+      <dt>Voces en inglés</dt><dd id="d-voices">…</dd>
+      <dt>Permiso de micrófono</dt><dd id="d-perm">…</dd>
+      <dt>Claude (sample)</dt><dd id="d-claude">comprobando…</dd>
+    </dl>
+  </section>
+
+  <section aria-labelledby="h-listen">
+    <span class="step">Prueba 1</span>
+    <h2 id="h-listen">Habla en inglés</h2>
+    <label for="lang">Acento del reconocimiento
+      <select id="lang">
+        <option value="en-US">Inglés americano (en-US)</option>
+        <option value="en-GB">Inglés británico (en-GB)</option>
+      </select>
+    </label>
+    <button id="btn-listen" class="primary">🎤 Pulsar y hablar</button>
+    <div id="transcript" class="transcript" aria-live="polite"></div>
+    <p id="listen-status" class="status">Di algo como «I went to the beach last weekend».</p>
+    <button id="btn-gum">Probar acceso directo al micrófono</button>
+  </section>
+
+  <section aria-labelledby="h-speak">
+    <span class="step">Prueba 2</span>
+    <h2 id="h-speak">Escucha al tutor</h2>
+    <label for="voice">Voz
+      <select id="voice"><option value="">Por defecto</option></select>
+    </label>
+    <label for="phrase">Frase
+      <textarea id="phrase">Hi, I'm Sam, your English tutor. What did you do last weekend?</textarea>
+    </label>
+    <button id="btn-speak" class="primary">🔊 Leer en voz alta</button>
+    <p id="speak-status" class="status"></p>
+  </section>
+
+  <section aria-labelledby="h-result">
+    <h2 id="h-result">Resultado</h2>
+    <div class="verdict">
+      <p>Micrófono: <strong id="v-mic" class="warn">sin probar</strong></p>
+      <p>Voz: <strong id="v-tts" class="warn">sin probar</strong></p>
+    </div>
+    <pre id="log"></pre>
+    <button id="btn-copy">Copiar informe</button>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const logLines = [];
+function log(msg) {
+  const t = new Date().toTimeString().slice(0, 8);
+  logLines.push(`${t} ${msg}`);
+  $("log").textContent = logLines.join("\n");
+  $("log").scrollTop = $("log").scrollHeight;
+}
+function set(id, text, cls) { const el = $(id); el.textContent = text; el.className = cls || ""; }
+
+log(`Navegador: ${navigator.userAgent}`);
+log(`En iframe: ${window.self !== window.top ? "sí" : "no"} · HTTPS: ${location.protocol === "https:" ? "sí" : "no"}`);
+
+// ---- Diagnóstico ----
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+set("d-sr", SR ? "disponible" : "no existe", SR ? "ok" : "bad");
+const hasTTS = "speechSynthesis" in window;
+set("d-tts", hasTTS ? "disponible" : "no existe", hasTTS ? "ok" : "bad");
+
+(async () => {
+  try {
+    const p = await navigator.permissions.query({ name: "microphone" });
+    const show = () => set("d-perm", { granted: "concedido", denied: "denegado", prompt: "preguntará" }[p.state] || p.state,
+      p.state === "granted" ? "ok" : p.state === "denied" ? "bad" : "warn");
+    show(); p.onchange = () => { show(); log(`Permiso de micrófono → ${p.state}`); };
+    log(`Permiso de micrófono: ${p.state}`);
+  } catch (e) { set("d-perm", "no consultable", "warn"); log(`Permiso no consultable: ${e.message}`); }
+})();
+
+(async () => {
+  if (!window.claude || typeof window.claude.use !== "function") {
+    set("d-claude", "no hay → modo PWA", "warn"); log("window.claude no existe → modo PWA"); return;
+  }
+  try {
+    const sample = await window.claude.use("sample");
+    if (typeof sample === "function") { set("d-claude", "sí → modo artifact", "ok"); log("claude.use('sample') devuelve función → modo artifact"); }
+    else { set("d-claude", "no disponible → PWA", "warn"); log("claude.use('sample') devuelve null"); }
+  } catch (e) { set("d-claude", "error", "bad"); log(`claude.use('sample') falló: ${e.message}`); }
+})();
+
+// ---- Voces ----
+let voices = [];
+function loadVoices() {
+  if (!hasTTS) return;
+  voices = speechSynthesis.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith("en"));
+  const sel = $("voice"), prev = sel.value;
+  sel.innerHTML = '<option value="">Por defecto</option>' +
+    voices.map((v, i) => `<option value="${i}">${v.name} (${v.lang})</option>`).join("");
+  sel.value = prev;
+  set("d-voices", voices.length ? String(voices.length) : "ninguna aún", voices.length ? "ok" : "warn");
+}
+if (hasTTS) { loadVoices(); speechSynthesis.onvoiceschanged = () => { loadVoices(); log(`Voces en inglés: ${voices.length}`); }; }
+
+// ---- Prueba 1: reconocimiento ----
+const ERR_ES = {
+  "not-allowed": "El micrófono está bloqueado (permiso denegado o el visor no lo permite).",
+  "service-not-allowed": "El navegador no permite el servicio de reconocimiento aquí.",
+  "audio-capture": "No se encuentra ningún micrófono.",
+  "network": "El reconocimiento necesita conexión y ha fallado la red.",
+  "no-speech": "No se ha oído nada. Prueba otra vez hablando más cerca.",
+  "aborted": "Se ha cancelado la escucha.",
+  "language-not-supported": "Este idioma no está disponible en el reconocimiento.",
+};
+let rec = null, listening = false, gotText = false;
+
+function micVerdict(ok, detail) {
+  set("v-mic", ok ? `funciona ✓ ${detail || ""}` : `no funciona ✗ ${detail || ""}`, ok ? "ok" : "bad");
+}
+
+$("btn-listen").addEventListener("click", () => {
+  if (!SR) { micVerdict(false, "(no hay SpeechRecognition)"); log("SpeechRecognition no existe"); return; }
+  if (listening) { rec.stop(); return; }
+  rec = new SR();
+  rec.lang = $("lang").value;
+  rec.interimResults = true;
+  rec.continuous = false;
+  rec.maxAlternatives = 1;
+  gotText = false;
+  $("transcript").textContent = "";
+  rec.onstart = () => {
+    listening = true;
+    $("btn-listen").classList.add("recording");
+    $("btn-listen").textContent = "■ Escuchando… pulsa para parar";
+    $("listen-status").textContent = "Habla ahora.";
+    log(`Escucha iniciada (${rec.lang})`);
+  };
+  rec.onresult = (e) => {
+    let final = "", interim = "";
+    for (const r of e.results) (r.isFinal ? (final += r[0].transcript) : (interim += r[0].transcript));
+    const box = $("transcript");
+    box.textContent = final;
+    if (interim) { const s = document.createElement("span"); s.className = "interim"; s.textContent = interim; box.append(s); }
+    if (final.trim()) {
+      gotText = true;
+      const conf = e.results[e.results.length - 1][0].confidence;
+      log(`Transcrito: "${final.trim()}" (confianza ${conf ? conf.toFixed(2) : "?"})`);
+    }
+  };
+  rec.onerror = (e) => {
+    $("listen-status").textContent = ERR_ES[e.error] || `Error: ${e.error}`;
+    log(`Error de reconocimiento: ${e.error}${e.message ? " · " + e.message : ""}`);
+    if (e.error !== "no-speech" && e.error !== "aborted") micVerdict(false, `(${e.error})`);
+  };
+  rec.onend = () => {
+    listening = false;
+    $("btn-listen").classList.remove("recording");
+    $("btn-listen").textContent = "🎤 Pulsar y hablar";
+    if (gotText) { micVerdict(true, `(${rec.lang})`); $("listen-status").textContent = "¿Es lo que has dicho? Prueba también el otro acento."; }
+    log("Escucha terminada");
+  };
+  try { rec.start(); } catch (e) { log(`rec.start() lanzó: ${e.name} ${e.message}`); micVerdict(false, `(${e.name})`); }
+});
+
+$("btn-gum").addEventListener("click", async () => {
+  if (!navigator.mediaDevices?.getUserMedia) { log("getUserMedia no existe"); $("listen-status").textContent = "Este navegador no expone getUserMedia."; return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    log(`getUserMedia OK: ${stream.getAudioTracks().map(t => t.label || "pista de audio").join(", ")}`);
+    stream.getTracks().forEach(t => t.stop());
+    $("listen-status").textContent = "Acceso directo al micrófono: permitido.";
+  } catch (e) {
+    log(`getUserMedia falló: ${e.name} · ${e.message}`);
+    $("listen-status").textContent = `Acceso directo al micrófono bloqueado (${e.name}).`;
+  }
+});
+
+// ---- Prueba 2: síntesis ----
+$("btn-speak").addEventListener("click", () => {
+  if (!hasTTS) { set("v-tts", "no funciona ✗ (no hay speechSynthesis)", "bad"); return; }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance($("phrase").value.trim() || "Hello!");
+  const v = voices[$("voice").value];
+  if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = $("lang").value; }
+  u.rate = 0.95;
+  u.onstart = () => { $("speak-status").textContent = "Hablando…"; log(`TTS empieza (${v ? v.name : u.lang})`); };
+  u.onend = () => {
+    $("speak-status").textContent = "¿Lo has oído? Si no, sube el volumen multimedia del móvil.";
+    set("v-tts", "ha sonado ✓ (confírmalo de oído)", "ok"); log("TTS terminado");
+  };
+  u.onerror = (e) => { $("speak-status").textContent = `Error de voz: ${e.error}`; set("v-tts", `no funciona ✗ (${e.error})`, "bad"); log(`TTS error: ${e.error}`); };
+  speechSynthesis.speak(u);
+});
+
+// ---- Copiar informe ----
+$("btn-copy").addEventListener("click", async () => {
+  const text = `Micrófono: ${$("v-mic").textContent}\nVoz: ${$("v-tts").textContent}\n\n${logLines.join("\n")}`;
+  try { await navigator.clipboard.writeText(text); $("btn-copy").textContent = "Copiado"; }
+  catch { const r = document.createRange(); r.selectNodeContents($("log")); getSelection().removeAllRanges(); getSelection().addRange(r); $("btn-copy").textContent = "Selecciona y copia el texto"; }
+  setTimeout(() => $("btn-copy").textContent = "Copiar informe", 2500);
+});
+</script>
