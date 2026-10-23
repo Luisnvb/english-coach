@@ -203,7 +203,7 @@ Cinco fases cortas; la fase 0 decide el modo y conviene hacerla antes de escribi
    - *Terminado cuando:* la usas 5 días seguidos sin tener que tocar nada técnico.
 
 - [x] Fase 0: prueba de micrófono en el móvil — micrófono bloqueado en el visor → modo PWA
-- [ ] Fase 1: bucle de conversación
+- [x] Fase 1: bucle de conversación — 10 turnos hablados en Android (23 oct 2026)
 - [ ] Fase 2: resumen y banco de errores
 - [ ] Fase 3: role-plays y repaso
 - [ ] Fase 4: pulido para el móvil
