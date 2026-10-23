@@ -148,7 +148,7 @@ Dos colecciones bastan: errores y sesiones. Los nombres de campo son los mismos 
 
 | Modo | Dónde | Ruta |
 | --- | --- | --- |
-| Artifact | Capacidad `db` (privada por usuario) | `data/users/{userId}/errors/{id}` y `data/users/{userId}/sessions/{id}` |
+| Artifact | Capacidad `db` (privada por usuario) | `data/users/{userId}/errors/items/{id}` y `data/users/{userId}/sessions/items/{id}` (un documento necesita un número par de segmentos) |
 | PWA | `localStorage` del móvil (con botón de exportar/importar JSON) | claves `esc.errors` y `esc.sessions` |
 
 **Error**

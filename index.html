@@ -9,11 +9,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,700&display=swap">
 <style>
-/* Layout: pantalla única a toda altura; barra arriba, chat en el centro, mandos al alcance del pulgar abajo */
+/* Layout: pantalla única a toda altura; barra arriba, chat en el centro, mandos al alcance del pulgar abajo.
+   Resumen, banco y ajustes son pantallas completas superpuestas. */
 :root {
   --bg: #f3f5f8; --surface: #ffffff; --fg: #18202b; --muted: #5a6577; --line: #d9dee6;
   --accent: #2346c4; --accent-fg: #ffffff; --tutor: #e6ebf7; --me: #2346c4; --me-fg: #ffffff;
-  --rec: #c62a3a; --fix-bg: #fff4dc; --fix-fg: #6b4700; --bad: #b3261e;
+  --rec: #c62a3a; --fix-bg: #fff4dc; --fix-fg: #6b4700; --bad: #b3261e; --good: #1d7a46;
   --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color-scheme: light;
@@ -21,11 +22,11 @@
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #11151c; --surface: #1a2029; --fg: #e8ecf2; --muted: #9aa5b6; --line: #2c3442;
   --accent: #7b96ff; --accent-fg: #0d1222; --tutor: #222a38; --me: #3552c9; --me-fg: #ffffff;
-  --rec: #ff6b78; --fix-bg: #3a2f17; --fix-fg: #f4d08a; --bad: #ff8a80; color-scheme: dark } }
+  --rec: #ff6b78; --fix-bg: #3a2f17; --fix-fg: #f4d08a; --bad: #ff8a80; --good: #5fd08f; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #11151c; --surface: #1a2029; --fg: #e8ecf2; --muted: #9aa5b6; --line: #2c3442;
   --accent: #7b96ff; --accent-fg: #0d1222; --tutor: #222a38; --me: #3552c9; --me-fg: #ffffff;
-  --rec: #ff6b78; --fix-bg: #3a2f17; --fix-fg: #f4d08a; --bad: #ff8a80; color-scheme: dark }
+  --rec: #ff6b78; --fix-bg: #3a2f17; --fix-fg: #f4d08a; --bad: #ff8a80; --good: #5fd08f; color-scheme: dark }
 
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
@@ -40,7 +41,7 @@ button:disabled { opacity: .5; cursor: default; }
 #app { height: 100%; display: flex; flex-direction: column; max-width: 40rem; margin: 0 auto; }
 .pad { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 
-.bar { display: flex; align-items: center; gap: 12px; padding-block: 10px; border-bottom: 1px solid var(--line); }
+.bar { display: flex; align-items: center; gap: 8px; padding-block: 10px; border-bottom: 1px solid var(--line); }
 .bar h1 { font: 700 1.3rem/1.1 var(--display); margin: 0; }
 .bar .meta { display: flex; gap: 8px; align-items: center; flex: 1; min-width: 0; flex-wrap: wrap; }
 .chip { font-size: .78rem; font-weight: 700; letter-spacing: .04em; padding: 3px 9px; border-radius: 99px; background: var(--tutor); color: var(--muted); }
@@ -75,11 +76,13 @@ button:disabled { opacity: .5; cursor: default; }
 #type-form input { flex: 1; min-width: 0; min-height: 52px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); padding: 0 12px; }
 #type-form button { min-height: 52px; border-radius: 12px; border: 0; background: var(--accent); color: var(--accent-fg); font-weight: 700; padding: 0 16px; }
 
-#settings { position: fixed; inset: 0; background: var(--bg); overflow-y: auto; z-index: 5;
+/* Pantallas superpuestas */
+.screen { position: fixed; inset: 0; background: var(--bg); overflow-y: auto; z-index: 5;
   padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
-#settings .inner { max-width: 40rem; margin: 0 auto; display: grid; gap: 18px; padding-block: 10px 32px; }
-#settings h2 { font: 700 1.3rem/1.1 var(--display); margin: 0; flex: 1; }
-#settings .head { display: flex; align-items: center; gap: 12px; }
+.screen .inner { max-width: 40rem; margin: 0 auto; display: grid; gap: 18px; padding-block: 10px 32px; }
+.screen h2 { font: 700 1.3rem/1.1 var(--display); margin: 0; flex: 1; text-wrap: balance; }
+.screen h3 { font: 700 1.05rem/1.2 var(--display); margin: 0; }
+.screen .head { display: flex; align-items: center; gap: 12px; }
 fieldset { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 14px; margin: 0; display: grid; gap: 12px; min-width: 0; }
 legend { font-weight: 700; padding: 0 6px; }
 label { display: grid; gap: 4px; font-size: .9rem; color: var(--muted); }
@@ -88,6 +91,23 @@ fieldset input, fieldset select { min-height: 48px; border-radius: 10px; border:
 .row { display: flex; gap: 10px; flex-wrap: wrap; }
 .row > button { flex: 1 1 8rem; min-height: 52px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-weight: 700; }
 .row > button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+
+/* Resumen y banco */
+.feedback { margin: 0; font-size: 1.1rem; padding: 14px; border-radius: 14px; background: var(--tutor); }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.item { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
+.item .said { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--bad); }
+.item .correct { font-weight: 700; font-size: 1.1rem; }
+.item .es { color: var(--muted); }
+.item .tag { justify-self: start; font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.item .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.item .actions button { min-height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); padding: 0 12px; font-weight: 700; }
+.item .actions .del.armed { border-color: var(--bad); color: var(--bad); }
+.item .meta-line { font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.filters { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+.filters button { flex: none; min-height: 44px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); padding: 0 14px; font-weight: 700; font-size: .9rem; }
+.filters button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.none { color: var(--muted); margin: 0; }
 </style>
 </head>
 <body>
@@ -98,13 +118,14 @@ fieldset input, fieldset select { min-height: 48px; border-radius: 10px; border:
       <span id="mode-chip" class="chip">…</span>
       <span id="turn-chip" class="chip" hidden></span>
     </div>
+    <button id="btn-bank" class="icon-btn" aria-label="Banco de errores">📚</button>
     <button id="btn-settings" class="icon-btn" aria-label="Ajustes">⚙</button>
   </header>
 
   <main id="chat" class="pad" aria-live="polite">
     <div id="empty" class="empty">
       <h2>Habla en inglés con Sam</h2>
-      <p>Sam te propone un tema y te contesta en voz alta. Pulsa el micrófono para hablar y otra vez para enviar.</p>
+      <p>Sam te propone un tema y te contesta en voz alta. Pulsa el micrófono para hablar y otra vez para enviar. Al acabar, pulsa «Terminar» para ver tus errores.</p>
     </div>
   </main>
 
@@ -117,16 +138,57 @@ fieldset input, fieldset select { min-height: 48px; border-radius: 10px; border:
     <div class="dock-row">
       <button id="btn-type" class="side-btn">⌨<br>Escribir</button>
       <button id="btn-main" class="mic">Empezar</button>
-      <button id="btn-new" class="side-btn">↺<br>Nueva</button>
+      <button id="btn-finish" class="side-btn">✓<br>Terminar</button>
     </div>
   </footer>
 </div>
 
-<section id="settings" hidden aria-labelledby="h-settings">
+<section id="summary" class="screen" hidden aria-labelledby="h-summary">
+  <div class="inner pad">
+    <div class="head">
+      <h2 id="h-summary">Resumen de la sesión</h2>
+      <button class="icon-btn close-screen" aria-label="Cerrar resumen">✕</button>
+    </div>
+    <p id="sum-feedback" class="feedback"></p>
+    <p id="sum-meta" class="hint"></p>
+    <h3>Tus errores principales</h3>
+    <ul id="sum-errors" class="list"></ul>
+    <h3>Expresiones útiles</h3>
+    <ul id="sum-phrases" class="list"></ul>
+    <p id="sum-saved" class="hint"></p>
+    <div class="row">
+      <button id="btn-sum-bank">📚 Ver banco de errores</button>
+      <button id="btn-sum-new" class="primary">Nueva conversación</button>
+    </div>
+  </div>
+</section>
+
+<section id="bank" class="screen" hidden aria-labelledby="h-bank">
+  <div class="inner pad">
+    <div class="head">
+      <h2 id="h-bank">Banco de errores</h2>
+      <button class="icon-btn close-screen" aria-label="Cerrar banco">✕</button>
+    </div>
+    <div id="bank-filters" class="filters" role="group" aria-label="Filtrar por tipo"></div>
+    <ul id="bank-list" class="list"></ul>
+    <fieldset id="backup-box">
+      <legend>Copia de seguridad</legend>
+      <p class="hint">Tus errores se guardan solo en este móvil. Exporta un archivo de vez en cuando por si borras los datos de Chrome.</p>
+      <div class="row">
+        <button id="btn-export">Exportar JSON</button>
+        <button id="btn-import">Importar JSON</button>
+      </div>
+      <input id="import-file" type="file" accept="application/json,.json" hidden>
+      <p id="backup-status" class="hint"></p>
+    </fieldset>
+  </div>
+</section>
+
+<section id="settings" class="screen" hidden aria-labelledby="h-settings">
   <div class="inner pad">
     <div class="head">
       <h2 id="h-settings">Ajustes</h2>
-      <button id="btn-close-settings" class="icon-btn" aria-label="Cerrar ajustes">✕</button>
+      <button class="icon-btn close-screen" aria-label="Cerrar ajustes">✕</button>
     </div>
 
     <fieldset id="key-box">
@@ -175,6 +237,39 @@ Rules:
 - Start of session: if REVIEW items are provided, first ask them to say 2-3 of those phrases correctly (give the Spanish meaning or a situation), one at a time, then move to the conversation.`;
 
 const KICKOFF = "(The learner has just opened a new free conversation session. Greet them briefly and propose one everyday topic such as work, travel or their weekend, or invite them to choose their own topic.)";
+
+const SUMMARY_PROMPT = `Analyse this English practice transcript of a B1 Spanish-speaking learner. Reply with ONLY a JSON object:
+{"errors":[{"said":"...","correct":"...","explanation_es":"short explanation in Spanish","type":"grammar|vocabulary|pronunciation|naturalness"}],
+ "phrases":[{"en":"...","es":"..."}],
+ "feedback_es":"one encouraging sentence in Spanish"}
+Max 3 errors (the most important, recurring ones first), max 3 useful phrases. Ignore transcription glitches.
+TRANSCRIPT:
+{transcript}`;
+
+const ERROR_TYPES = ["grammar", "vocabulary", "pronunciation", "naturalness"];
+const TYPE_ES = { grammar: "Gramática", vocabulary: "Vocabulario", pronunciation: "Pronunciación", naturalness: "Poco natural" };
+
+const SUMMARY_SCHEMA = {
+  type: "object", additionalProperties: false, required: ["errors", "phrases", "feedback_es"],
+  properties: {
+    errors: { type: "array", items: {
+      type: "object", additionalProperties: false, required: ["said", "correct", "explanation_es", "type"],
+      properties: { said: { type: "string" }, correct: { type: "string" }, explanation_es: { type: "string" }, type: { type: "string", enum: ERROR_TYPES } },
+    } },
+    phrases: { type: "array", items: {
+      type: "object", additionalProperties: false, required: ["en", "es"],
+      properties: { en: { type: "string" }, es: { type: "string" } },
+    } },
+    feedback_es: { type: "string" },
+  },
+};
+
+// ================= Fechas =================
+function isoDay(d = new Date()) {
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+function addDays(day, n) { const d = new Date(day + "T12:00:00"); d.setDate(d.getDate() + n); return isoDay(d); }
 
 // ================= Preferencias (localStorage) =================
 const prefs = {
@@ -280,10 +375,19 @@ class AiError extends Error { constructor(code, detail) { super(detail || code);
 
 const API_URL = "https://api.anthropic.com/v1/messages";
 const MODEL_CHAT = "claude-haiku-5-5";
+const MODEL_SUMMARY = "claude-haiku-5-5";
+
+// Acepta el objeto aunque venga con texto alrededor o dentro de un bloque de código.
+function parseJsonLoose(text) {
+  try { return JSON.parse(text); } catch {}
+  const a = text.indexOf("{"), b = text.lastIndexOf("}");
+  if (a >= 0 && b > a) { try { return JSON.parse(text.slice(a, b + 1)); } catch {} }
+  throw new AiError("bad_json");
+}
 
 const aiApi = {
   mode: "pwa",
-  async turn(rules, messages) {
+  async _call(body) {
     const key = prefs.apiKey();
     if (!key) throw new AiError("no_key");
     let res;
@@ -296,13 +400,7 @@ const aiApi = {
           "anthropic-version": "2023-06-01",
           "anthropic-dangerous-direct-browser-access": "true",
         },
-        body: JSON.stringify({
-          model: MODEL_CHAT,
-          max_tokens: 1024,
-          system: rules,
-          messages,
-          output_config: { effort: "low" },
-        }),
+        body: JSON.stringify(body),
       });
     } catch { throw new AiError("network"); }
     const data = await res.json().catch(() => null);
@@ -318,9 +416,28 @@ const aiApi = {
     if (!text) throw new AiError("empty");
     return text;
   },
+  turn(rules, messages) {
+    return this._call({ model: MODEL_CHAT, max_tokens: 1024, system: rules, messages, output_config: { effort: "low" } });
+  },
+  async summary(transcript) {
+    const text = await this._call({
+      model: MODEL_SUMMARY,
+      max_tokens: 4000,
+      messages: [{ role: "user", content: SUMMARY_PROMPT.replace("{transcript}", transcript) }],
+      output_config: { effort: "medium", format: { type: "json_schema", schema: SUMMARY_SCHEMA } },
+    });
+    return parseJsonLoose(text);
+  },
 };
 
 function makeArtifactAi(sample) {
+  const wrap = (e) => {
+    if (e instanceof AiError) return e;
+    if (e && e.code === "rate_limited") return new AiError("rate_limited");
+    if (e && e.code === "not_granted") return new AiError("not_granted");
+    if (e && e.code === "invalid_json") return new AiError("bad_json");
+    return new AiError("api", e && e.message);
+  };
   return {
     mode: "artifact",
     // Sin system: las instrucciones van al principio del primer turno de usuario.
@@ -330,24 +447,85 @@ function makeArtifactAi(sample) {
         const { text } = await sample(input, { modelTier: "quick", cache: false });
         if (!text || !text.trim()) throw new AiError("empty");
         return text.trim();
-      } catch (e) {
-        if (e instanceof AiError) throw e;
-        if (e && e.code === "rate_limited") throw new AiError("rate_limited");
-        if (e && e.code === "not_granted") throw new AiError("not_granted");
-        throw new AiError("api", e && e.message);
-      }
+      } catch (e) { throw wrap(e); }
+    },
+    async summary(transcript) {
+      try { return await sample.json(SUMMARY_PROMPT.replace("{transcript}", transcript), { modelTier: "default" }); }
+      catch (e) { throw wrap(e); }
     },
   };
 }
 
-async function detectAi() {
+// ================= Adaptador de almacenamiento =================
+const localStore = {
+  mode: "local",
+  _read(key) { try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; } },
+  _write(key, list) {
+    try { localStorage.setItem(key, JSON.stringify(list)); }
+    catch { throw new Error("No se ha podido guardar en este móvil (¿almacenamiento lleno o bloqueado?)."); }
+  },
+  async listErrors() { return this._read("esc.errors"); },
+  async saveErrors(errors) {
+    const all = this._read("esc.errors");
+    for (const e of errors) {
+      const i = all.findIndex(x => x.id === e.id);
+      if (i >= 0) all[i] = e; else all.push(e);
+    }
+    this._write("esc.errors", all);
+  },
+  async deleteError(id) { this._write("esc.errors", this._read("esc.errors").filter(e => e.id !== id)); },
+  async listSessions() { return this._read("esc.sessions"); },
+  async saveSession(s) {
+    const all = this._read("esc.sessions").filter(x => x.id !== s.id);
+    all.push(s);
+    this._write("esc.sessions", all);
+  },
+  async dueForReview(today) {
+    return (await this.listErrors())
+      .filter(e => e.box < 5 && e.nextReview <= today)
+      .sort((a, b) => a.box - b.box || a.nextReview.localeCompare(b.nextReview))
+      .slice(0, 3);
+  },
+};
+
+function makeDbStore(db, uid) {
+  // Rutas con número par de segmentos para documentos: data/users/{uid}/errors/items/{id}
+  const errors = db.doc(`data/users/${uid}/errors`).collection("items");
+  const sessions = db.doc(`data/users/${uid}/sessions`).collection("items");
+  const all = async (col) => (await col.get()).docs.map(d => d.data());
+  return {
+    mode: "db",
+    listErrors: () => all(errors),
+    async saveErrors(list) { for (const e of list) await errors.doc(e.id).set(e); },
+    deleteError: (id) => errors.doc(id).delete(),
+    listSessions: () => all(sessions),
+    saveSession: (s) => sessions.doc(s.id).set(s),
+    async dueForReview(today) {
+      return (await all(errors))
+        .filter(e => e.box < 5 && e.nextReview <= today)
+        .sort((a, b) => a.box - b.box || a.nextReview.localeCompare(b.nextReview))
+        .slice(0, 3);
+    },
+  };
+}
+
+// ================= Detección de modo =================
+async function detectMode() {
   if (window.claude && typeof window.claude.use === "function") {
     try {
       const sample = await window.claude.use("sample");
-      if (typeof sample === "function") return makeArtifactAi(sample);
+      if (typeof sample === "function") {
+        let store = localStore;
+        try {
+          const [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+          if (db && user) store = makeDbStore(db, await user.id());
+        } catch {}
+        return { ai: makeArtifactAi(sample), store };
+      }
     } catch {}
   }
-  return aiApi;
+  try { navigator.storage?.persist?.(); } catch {}
+  return { ai: aiApi, store: localStore };
 }
 
 const AI_ERR_ES = {
@@ -358,6 +536,7 @@ const AI_ERR_ES = {
   network: "No hay conexión. Comprueba la red y pulsa Reintentar.",
   refusal: "Sam no ha querido responder a eso. Prueba a decirlo de otra forma.",
   empty: "Sam no ha devuelto texto. Pulsa Reintentar.",
+  bad_json: "El resumen ha llegado mal formado. Pulsa Reintentar.",
   not_granted: "No has dado permiso para usar tu cuenta de Claude.",
 };
 
@@ -373,8 +552,8 @@ const VOICE_ERR_ES = {
 
 // ================= Sesión de conversación =================
 const $ = (id) => document.getElementById(id);
-let ai = aiApi;
-const state = { phase: "off", messages: [], turns: 0, liveBubble: null, wakeLock: null };
+let ai = aiApi, store = localStore;
+const state = { phase: "off", messages: [], turns: 0, startedAt: 0, wakeLock: null };
 
 function splitReply(reply) {
   const lines = reply.split("\n").map(l => l.trim()).filter(Boolean);
@@ -439,6 +618,7 @@ function setPhase(phase, status = "") {
     speaking: "Sam está hablando.",
   }[phase];
   $("type-form").querySelector("button").disabled = phase === "thinking" || phase === "off";
+  $("btn-finish").disabled = phase === "off" || phase === "thinking";
   const tc = $("turn-chip");
   tc.hidden = state.turns === 0;
   tc.textContent = `${state.turns} ${state.turns === 1 ? "turno" : "turnos"}`;
@@ -478,12 +658,26 @@ function sendUser(text) {
   tutorTurn();
 }
 
+function clearChat() {
+  $("chat").querySelectorAll(".msg").forEach(m => m.remove());
+  $("empty").hidden = false;
+}
+
 async function startSession() {
   state.messages = [{ role: "user", content: KICKOFF }];
   state.turns = 0;
-  $("chat").querySelectorAll(".msg").forEach(m => m.remove());
+  state.startedAt = Date.now();
+  clearChat();
   try { state.wakeLock = await navigator.wakeLock?.request("screen"); } catch {}
   await tutorTurn();
+}
+
+function endSession() {
+  state.messages = [];
+  state.turns = 0;
+  try { state.wakeLock?.release(); } catch {}
+  state.wakeLock = null;
+  setPhase("off");
 }
 
 async function listen() {
@@ -501,6 +695,190 @@ async function listen() {
   }
 }
 
+// ================= Resumen y guardado =================
+function transcriptText() {
+  // El primer mensaje es la instrucción de arranque, no algo que dijo el alumno.
+  return state.messages.slice(1)
+    .map(m => (m.role === "user" ? "Learner: " : "Tutor: ") + m.content)
+    .join("\n");
+}
+
+function cleanSummary(raw) {
+  const s = (v) => typeof v === "string" ? v.trim() : "";
+  const errors = (Array.isArray(raw?.errors) ? raw.errors : [])
+    .map(e => ({ said: s(e?.said), correct: s(e?.correct), explanation_es: s(e?.explanation_es),
+                 type: ERROR_TYPES.includes(e?.type) ? e.type : "grammar" }))
+    .filter(e => e.said && e.correct).slice(0, 3);
+  const phrases = (Array.isArray(raw?.phrases) ? raw.phrases : [])
+    .map(p => ({ en: s(p?.en), es: s(p?.es) })).filter(p => p.en).slice(0, 3);
+  return { errors, phrases, feedback_es: s(raw?.feedback_es) };
+}
+
+const norm = (t) => t.toLowerCase().replace(/[^a-z0-9' ]+/g, " ").replace(/\s+/g, " ").trim();
+
+// Un error que ya estaba en el banco no se duplica: cuenta como repetido y vuelve a la caja 1.
+async function recordErrors(found, today) {
+  const existing = await store.listErrors();
+  const stamp = Date.now().toString(36);
+  const saved = found.map((e, i) => {
+    const prev = existing.find(x => norm(x.correct) === norm(e.correct) || norm(x.said) === norm(e.said));
+    if (prev) return { ...prev, explanation_es: e.explanation_es || prev.explanation_es,
+                       box: 1, nextReview: addDays(today, 1), timesSeen: (prev.timesSeen || 1) + 1 };
+    return { id: `e_${today}_${stamp}${i + 1}`, said: e.said, correct: e.correct, explanation_es: e.explanation_es,
+             type: e.type, createdAt: today, box: 1, nextReview: addDays(today, 1), timesSeen: 1, timesCorrect: 0 };
+  });
+  await store.saveErrors(saved);
+  return saved;
+}
+
+async function finishSession() {
+  if (state.phase === "listening") voice.stop();
+  voice.stopSpeaking();
+  if (state.turns === 0) { endSession(); clearChat(); return; }
+  setPhase("thinking", "Preparando tu resumen…");
+  let summary;
+  try {
+    summary = cleanSummary(await ai.summary(transcriptText()));
+  } catch (e) {
+    setPhase("idle", "");
+    addError(AI_ERR_ES[e.code] || `Error: ${e.message}`, e.code === "no_key" || e.code === "auth" ? null : finishSession);
+    return;
+  }
+  const today = isoDay(), now = new Date();
+  const minutes = Math.max(1, Math.round((Date.now() - state.startedAt) / 60000));
+  let savedMsg;
+  try {
+    const saved = await recordErrors(summary.errors, today);
+    await store.saveSession({
+      id: `s_${today}T${String(now.getHours()).padStart(2, "0")}-${String(now.getMinutes()).padStart(2, "0")}`,
+      date: today, mode: "free", scenario: null, minutes, turns: state.turns,
+      errorIds: saved.map(e => e.id), phrases: summary.phrases,
+    });
+    savedMsg = saved.length ? `${saved.length} ${saved.length === 1 ? "error guardado" : "errores guardados"} en tu banco.` : "Sin errores nuevos que guardar.";
+  } catch (e) {
+    savedMsg = `No se ha podido guardar: ${e.message}`;
+  }
+  showSummary(summary, minutes, state.turns, savedMsg);
+  endSession();
+}
+
+function speakBtn(text) {
+  const b = document.createElement("button");
+  b.textContent = "🔊 Escuchar";
+  b.addEventListener("click", () => voice.speak(text));
+  return b;
+}
+
+function errorItem(e) {
+  const li = document.createElement("li");
+  li.className = "item";
+  const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = TYPE_ES[e.type] || e.type;
+  const said = document.createElement("div"); said.className = "said"; said.textContent = e.said;
+  const correct = document.createElement("div"); correct.className = "correct"; correct.textContent = e.correct;
+  const exp = document.createElement("div"); exp.className = "es"; exp.textContent = e.explanation_es;
+  const actions = document.createElement("div"); actions.className = "actions";
+  actions.append(speakBtn(e.correct));
+  li.append(tag, said, correct, exp, actions);
+  return li;
+}
+
+function showSummary(sum, minutes, turns, savedMsg) {
+  $("sum-feedback").textContent = sum.feedback_es || "¡Buen trabajo! Sigue practicando.";
+  $("sum-meta").textContent = `${minutes} min · ${turns} ${turns === 1 ? "turno" : "turnos"}`;
+  const el = $("sum-errors"); el.innerHTML = "";
+  if (sum.errors.length) sum.errors.forEach(e => el.append(errorItem(e)));
+  else el.innerHTML = '<li class="none">No hay errores importantes en esta sesión.</li>';
+  const ph = $("sum-phrases"); ph.innerHTML = "";
+  if (sum.phrases.length) sum.phrases.forEach(p => {
+    const li = document.createElement("li"); li.className = "item";
+    const en = document.createElement("div"); en.className = "correct"; en.textContent = p.en;
+    const es = document.createElement("div"); es.className = "es"; es.textContent = p.es;
+    const actions = document.createElement("div"); actions.className = "actions"; actions.append(speakBtn(p.en));
+    li.append(en, es, actions); ph.append(li);
+  });
+  else ph.innerHTML = '<li class="none">Sin expresiones nuevas esta vez.</li>';
+  $("sum-saved").textContent = savedMsg;
+  $("summary").hidden = false;
+}
+
+// ================= Banco de errores =================
+let bankFilter = "all";
+
+async function renderBank() {
+  const box = $("bank-filters");
+  box.innerHTML = "";
+  for (const t of ["all", ...ERROR_TYPES]) {
+    const b = document.createElement("button");
+    b.textContent = t === "all" ? "Todos" : TYPE_ES[t];
+    b.setAttribute("aria-pressed", String(bankFilter === t));
+    b.addEventListener("click", () => { bankFilter = t; renderBank(); });
+    box.append(b);
+  }
+  const list = $("bank-list");
+  let errors;
+  try { errors = await store.listErrors(); }
+  catch (e) { list.innerHTML = ""; list.append(Object.assign(document.createElement("li"), { className: "none", textContent: `No se ha podido leer el banco: ${e.message}` })); return; }
+  errors = errors.filter(e => bankFilter === "all" || e.type === bankFilter)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
+  list.innerHTML = "";
+  if (!errors.length) {
+    list.innerHTML = `<li class="none">${bankFilter === "all"
+      ? "Todavía no hay errores. Termina una conversación y aparecerán aquí."
+      : "No hay errores de este tipo."}</li>`;
+    return;
+  }
+  for (const e of errors) {
+    const li = errorItem(e);
+    const meta = document.createElement("div"); meta.className = "meta-line";
+    meta.textContent = `Desde ${e.createdAt} · visto ${e.timesSeen} ${e.timesSeen === 1 ? "vez" : "veces"} · caja ${e.box} · repaso ${e.nextReview}`;
+    li.insertBefore(meta, li.querySelector(".actions"));
+    const del = document.createElement("button");
+    del.className = "del"; del.textContent = "Borrar";
+    del.addEventListener("click", async () => {
+      if (!del.classList.contains("armed")) { del.classList.add("armed"); del.textContent = "¿Seguro? Pulsa otra vez"; return; }
+      await store.deleteError(e.id);
+      renderBank();
+    });
+    li.querySelector(".actions").append(del);
+    list.append(li);
+  }
+}
+
+function openBank() {
+  $("backup-box").hidden = store.mode !== "local";
+  $("backup-status").textContent = "";
+  renderBank();
+  $("bank").hidden = false;
+}
+
+$("btn-export").addEventListener("click", async () => {
+  const data = { app: "english-coach", exportedAt: new Date().toISOString(),
+                 errors: await store.listErrors(), sessions: await store.listSessions() };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: `english-coach-${isoDay()}.json` });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  $("backup-status").textContent = `Exportados ${data.errors.length} errores y ${data.sessions.length} sesiones.`;
+});
+$("btn-import").addEventListener("click", () => $("import-file").click());
+$("import-file").addEventListener("change", async (ev) => {
+  const file = ev.target.files[0];
+  ev.target.value = "";
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    const errs = (Array.isArray(data.errors) ? data.errors : []).filter(e => e && e.id && e.said && e.correct);
+    const sess = (Array.isArray(data.sessions) ? data.sessions : []).filter(s => s && s.id);
+    await store.saveErrors(errs);
+    for (const s of sess) await store.saveSession(s);
+    $("backup-status").textContent = `Importados ${errs.length} errores y ${sess.length} sesiones.`;
+    renderBank();
+  } catch (e) {
+    $("backup-status").textContent = "Ese archivo no es una copia válida de English Coach.";
+  }
+});
+
+// ================= Mandos =================
 $("btn-main").addEventListener("click", () => {
   switch (state.phase) {
     case "off": startSession(); break;
@@ -529,12 +907,15 @@ $("type-form").addEventListener("submit", (e) => {
   sendUser(text);
 });
 
-$("btn-new").addEventListener("click", () => {
-  if (state.phase === "thinking") return;
-  if (state.phase === "listening") voice.stop();
-  voice.stopSpeaking();
-  startSession();
+$("btn-finish").addEventListener("click", () => {
+  if (state.phase !== "off" && state.phase !== "thinking") finishSession();
 });
+
+$("btn-sum-bank").addEventListener("click", () => { $("summary").hidden = true; openBank(); });
+$("btn-sum-new").addEventListener("click", () => { $("summary").hidden = true; startSession(); });
+$("btn-bank").addEventListener("click", openBank);
+document.querySelectorAll(".close-screen").forEach(b =>
+  b.addEventListener("click", () => { b.closest(".screen").hidden = true; voice.stopSpeaking(); }));
 
 document.addEventListener("visibilitychange", async () => {
   if (document.visibilityState === "visible" && state.wakeLock && state.phase !== "off") {
@@ -563,10 +944,8 @@ function openSettings() {
   fillVoices();
   $("settings").hidden = false;
 }
-function closeSettings() { $("settings").hidden = true; }
 
 $("btn-settings").addEventListener("click", openSettings);
-$("btn-close-settings").addEventListener("click", closeSettings);
 $("btn-save-key").addEventListener("click", () => {
   const k = $("api-key").value.trim();
   if (!k.startsWith("sk-ant-")) { $("key-status").textContent = "Eso no parece una key de Anthropic: empieza por sk-ant-."; return; }
@@ -589,9 +968,9 @@ voice.onVoicesChanged(() => { if (!$("settings").hidden) fillVoices(); });
 
 // ================= Arranque =================
 setPhase("off");
-$("mode-chip").textContent = "…";
-detectAi().then((found) => {
-  ai = found;
+detectMode().then((found) => {
+  ai = found.ai;
+  store = found.store;
   $("mode-chip").textContent = ai.mode === "artifact" ? "Claude" : "API";
   if (!voice.canListen) $("status").textContent = "Este navegador no reconoce voz: podrás escribir.";
   else if (ai.mode === "pwa" && !prefs.apiKey()) $("status").textContent = "Antes de empezar, pega tu API key en Ajustes (⚙).";
