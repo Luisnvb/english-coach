@@ -204,8 +204,8 @@ Cinco fases cortas; la fase 0 decide el modo y conviene hacerla antes de escribi
 
 - [x] Fase 0: prueba de micrófono en el móvil — micrófono bloqueado en el visor → modo PWA
 - [x] Fase 1: bucle de conversación — 10 turnos hablados en Android (23 oct 2026)
-- [ ] Fase 2: resumen y banco de errores
-- [ ] Fase 3: role-plays y repaso
+- [x] Fase 2: resumen y banco de errores — errores guardados y persistentes (23 oct 2026)
+- [x] Fase 3: role-plays y repaso — role-play de hotel y repaso al día siguiente (24 oct 2026)
 - [ ] Fase 4: pulido para el móvil
 
 ## Cómo trabajar con Claude Code
@@ -228,9 +228,10 @@ english-coach/
 ├── CLAUDE.md            # reglas para Claude Code
 ├── SPEC.md              # este archivo
 ├── index.html           # LA app: HTML + CSS + JS en un solo archivo
+├── sw.js                # service worker mínimo; en la raíz porque su alcance es su carpeta
 ├── pwa/
 │   ├── manifest.webmanifest
-│   ├── sw.js            # service worker mínimo (caché de index.html)
+│   ├── icon-192.png
 │   └── icon-512.png
 └── tests/
     └── prompts.md       # conversaciones de prueba y resultados esperados
@@ -250,7 +251,7 @@ english-coach/
 
 **Publicar como PWA**
 
-- Crear un repositorio en GitHub, subir `index.html` y la carpeta `pwa/`, activar GitHub Pages.
+- Crear un repositorio en GitHub, subir `index.html`, `sw.js` y la carpeta `pwa/`, activar GitHub Pages.
 - En el móvil: abrir la URL en Chrome → menú ⋮ → «Añadir a pantalla de inicio» (o «Instalar app»).
 - Crear la API key en console.anthropic.com, ponerle un límite de gasto mensual bajo y pegarla en Ajustes de la app.
 

@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f3f5f8">
 <title>English Coach</title>
+<link rel="manifest" href="pwa/manifest.webmanifest">
+<link rel="icon" href="pwa/icon-192.png">
+<link rel="apple-touch-icon" href="pwa/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,700&display=swap">
@@ -57,6 +60,10 @@ button:disabled { opacity: .5; cursor: default; }
 .stat b { font: 700 1.8rem/1.1 var(--display); font-variant-numeric: tabular-nums; }
 .stat span { font-size: .85rem; color: var(--muted); }
 .due { margin: 0; padding: 12px 14px; border-radius: 14px; background: var(--fix-bg); color: var(--fix-fg); }
+.notice { margin: 0; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); display: grid; gap: 10px; }
+.notice p { margin: 0; }
+.notice button { min-height: 52px; border-radius: 12px; border: 0; background: var(--accent); color: var(--accent-fg); font-weight: 700; }
+.notice.offline { border-color: var(--bad); color: var(--bad); }
 .home-actions { margin-top: auto; display: grid; gap: 10px; }
 .home-actions button { min-height: 72px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); font: 700 1.15rem/1.2 var(--body); }
 .home-actions button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
@@ -147,6 +154,11 @@ fieldset input, fieldset select { min-height: 48px; border-radius: 10px; border:
         <div class="stat"><b id="stat-minutes">0</b><span>minutos esta semana</span></div>
       </div>
       <p id="home-due" class="due" hidden></p>
+      <div id="home-setup" class="notice" hidden>
+        <p>Para hablar con Sam necesitas pegar tu API key de Anthropic una vez.</p>
+        <button id="btn-setup">⚙ Poner la API key</button>
+      </div>
+      <p id="home-notice" class="notice" hidden></p>
       <div class="home-actions">
         <button id="btn-free" class="primary">💬 Conversación libre</button>
         <button id="btn-roleplay">🎭 Role-play</button>
@@ -255,6 +267,17 @@ fieldset input, fieldset select { min-height: 48px; border-radius: 10px; border:
         <input id="rate" type="range" min="0.7" max="1.2" step="0.05">
       </label>
       <div class="row"><button id="btn-test-voice">🔊 Probar voz</button></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Apariencia</legend>
+      <label for="theme">Tema
+        <select id="theme">
+          <option value="system">Como el móvil</option>
+          <option value="light">Claro</option>
+          <option value="dark">Oscuro</option>
+        </select>
+      </label>
     </fieldset>
   </div>
 </section>
@@ -374,7 +397,7 @@ function addDays(day, n) { const d = new Date(day + "T12:00:00"); d.setDate(d.ge
 
 // ================= Preferencias (localStorage) =================
 const prefs = {
-  defaults: { accent: "en-US", voiceURI: "", rate: 0.95 },
+  defaults: { accent: "en-US", voiceURI: "", rate: 0.95, theme: "system" },
   read() {
     try { return { ...this.defaults, ...JSON.parse(localStorage.getItem("esc.prefs") || "{}") }; }
     catch { return { ...this.defaults }; }
@@ -491,7 +514,10 @@ const aiApi = {
   async _call(body) {
     const key = prefs.apiKey();
     if (!key) throw new AiError("no_key");
-    let res;
+    if (navigator.onLine === false) throw new AiError("network");
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 60000);
+    let res, data;
     try {
       res = await fetch(API_URL, {
         method: "POST",
@@ -502,13 +528,21 @@ const aiApi = {
           "anthropic-dangerous-direct-browser-access": "true",
         },
         body: JSON.stringify(body),
+        signal: ctrl.signal,
       });
-    } catch { throw new AiError("network"); }
-    const data = await res.json().catch(() => null);
+      data = await res.json().catch(() => null);
+    } catch (e) {
+      throw new AiError(e.name === "AbortError" ? "timeout" : "network");
+    } finally { clearTimeout(timer); }
     if (!res.ok) {
-      const msg = data?.error?.message;
+      const msg = data?.error?.message || "";
+      if (/credit|billing|spend/i.test(msg)) throw new AiError("billing", msg);
       if (res.status === 401 || res.status === 403) throw new AiError("auth", msg);
-      if (res.status === 429) throw new AiError("rate_limited", msg);
+      if (res.status === 429) {
+        const err = new AiError("rate_limited", msg);
+        err.retryAfter = Number(res.headers.get("retry-after")) || 0;
+        throw err;
+      }
       if (res.status >= 500) throw new AiError("overloaded", msg);
       throw new AiError("api", msg || `HTTP ${res.status}`);
     }
@@ -632,7 +666,9 @@ async function detectMode() {
 const AI_ERR_ES = {
   no_key: "Falta la API key. Ábrela en Ajustes (⚙) y pégala.",
   auth: "La API key no es válida o está revocada. Revísala en Ajustes.",
-  rate_limited: "Has llegado al límite de uso. Espera un minuto y pulsa Reintentar.",
+  rate_limited: "Has llegado al límite de uso. Espera un minuto y pulsa Reintentar, o pulsa «Terminar» para ver el resumen.",
+  billing: "Se ha acabado el saldo o el límite de gasto de tu API key. Revísalo en console.anthropic.com → Billing.",
+  timeout: "Sam está tardando demasiado en contestar. Pulsa Reintentar.",
   overloaded: "El servicio está saturado. Reintenta en unos segundos.",
   network: "No hay conexión. Comprueba la red y pulsa Reintentar.",
   refusal: "Sam no ha querido responder a eso. Prueba a decirlo de otra forma.",
@@ -640,6 +676,15 @@ const AI_ERR_ES = {
   bad_json: "El resumen ha llegado mal formado. Pulsa Reintentar.",
   not_granted: "No has dado permiso para usar tu cuenta de Claude.",
 };
+
+function aiErrorText(e) {
+  if (e.code === "rate_limited" && e.retryAfter > 0) {
+    return `Has llegado al límite de uso. Espera ${e.retryAfter} s y pulsa Reintentar, o pulsa «Terminar» para ver el resumen.`;
+  }
+  return AI_ERR_ES[e.code] || `Error: ${e.message}`;
+}
+// Sin botón de reintentar: hay que arreglar algo fuera de la conversación.
+const NO_RETRY = ["no_key", "auth", "billing"];
 
 const VOICE_ERR_ES = {
   "not-allowed": "El micrófono está bloqueado. Permítelo en los ajustes del sitio de Chrome.",
@@ -745,9 +790,8 @@ async function tutorTurn() {
       $("status").textContent = "¡Objetivo cumplido! Pulsa «Terminar» para ver el resumen.";
     }
   } catch (e) {
-    const msg = AI_ERR_ES[e.code] || `Error: ${e.message}`;
     setPhase("idle", "");
-    addError(msg, e.code === "no_key" || e.code === "auth" ? null : tutorTurn);
+    addError(aiErrorText(e), NO_RETRY.includes(e.code) ? null : tutorTurn);
     if (e.code === "no_key") openSettings();
   }
 }
@@ -785,6 +829,7 @@ async function startSession(scenario = null) {
   const goal = $("goal");
   goal.hidden = !scenario;
   if (scenario) goal.innerHTML = `<b>🎭 ${scenario.title_es}.</b> Objetivo: ${scenario.goal_es}`;
+  if (!(history.state && history.state.session)) history.pushState({ session: true }, "");
   try { state.wakeLock = await navigator.wakeLock?.request("screen"); } catch {}
   await tutorTurn();
 }
@@ -878,7 +923,7 @@ async function finishSession() {
     summary = cleanSummary(await ai.summary(transcriptText(), state.review));
   } catch (e) {
     setPhase("idle", "");
-    addError(AI_ERR_ES[e.code] || `Error: ${e.message}`, e.code === "no_key" || e.code === "auth" ? null : finishSession);
+    addError(aiErrorText(e), NO_RETRY.includes(e.code) ? null : finishSession);
     return;
   }
   const today = isoDay(), now = new Date();
@@ -940,7 +985,7 @@ function showSummary(sum, minutes, turns, savedMsg) {
   });
   else ph.innerHTML = '<li class="none">Sin expresiones nuevas esta vez.</li>';
   $("sum-saved").textContent = savedMsg;
-  $("summary").hidden = false;
+  openScreen("summary");
 }
 
 // ================= Banco de errores =================
@@ -991,7 +1036,7 @@ function openBank() {
   $("backup-box").hidden = store.mode !== "local";
   $("backup-status").textContent = "";
   renderBank();
-  $("bank").hidden = false;
+  openScreen("bank");
 }
 
 $("btn-export").addEventListener("click", async () => {
@@ -1052,11 +1097,11 @@ function openScenarios() {
     const t = document.createElement("b"); t.textContent = sc.title_es;
     const g = document.createElement("span"); g.textContent = sc.goal_es;
     b.append(t, g);
-    b.addEventListener("click", () => { $("scenarios").hidden = true; startSession(sc); });
+    b.addEventListener("click", () => { hideScreens(); history.replaceState({ session: true }, ""); startSession(sc); });
     li.append(b);
     list.append(li);
   }
-  $("scenarios").hidden = false;
+  openScreen("scenarios");
 }
 
 $("btn-free").addEventListener("click", () => startSession());
@@ -1095,11 +1140,39 @@ $("btn-finish").addEventListener("click", () => {
   if (state.phase !== "off" && state.phase !== "thinking") finishSession();
 });
 
-$("btn-sum-bank").addEventListener("click", () => { $("summary").hidden = true; openBank(); });
-$("btn-sum-home").addEventListener("click", () => { $("summary").hidden = true; });
+// ================= Pantallas y botón «atrás» de Android =================
+// Cada pantalla abierta ocupa una entrada del historial: «atrás» la cierra en vez de salir de la app.
+function openScreen(id) {
+  const open = [...document.querySelectorAll(".screen")].filter(s => !s.hidden);
+  open.forEach(s => { s.hidden = true; });
+  $(id).hidden = false;
+  $(id).scrollTop = 0;
+  if (open.length) history.replaceState({ screen: id }, "");
+  else history.pushState({ screen: id }, "");
+}
+function closeScreen() {
+  if (history.state && history.state.screen) history.back();
+  else hideScreens();
+}
+function hideScreens() {
+  document.querySelectorAll(".screen").forEach(s => { s.hidden = true; });
+  voice.stopSpeaking();
+}
+
+window.addEventListener("popstate", () => {
+  const anyOpen = [...document.querySelectorAll(".screen")].some(s => !s.hidden);
+  if (anyOpen) { hideScreens(); return; }
+  // En plena sesión, «atrás» no saca de la app: se perdería la conversación.
+  if (state.phase !== "off") {
+    history.pushState({ session: true }, "");
+    $("status").textContent = "Para salir, pulsa «Terminar»: así guardas tus errores.";
+  }
+});
+
+$("btn-sum-bank").addEventListener("click", openBank);
+$("btn-sum-home").addEventListener("click", closeScreen);
 $("btn-bank").addEventListener("click", openBank);
-document.querySelectorAll(".close-screen").forEach(b =>
-  b.addEventListener("click", () => { b.closest(".screen").hidden = true; voice.stopSpeaking(); }));
+document.querySelectorAll(".close-screen").forEach(b => b.addEventListener("click", closeScreen));
 
 document.addEventListener("visibilitychange", async () => {
   if (document.visibilityState === "visible" && state.wakeLock && state.phase !== "off") {
@@ -1125,9 +1198,21 @@ function openSettings() {
   $("accent").value = p.accent;
   $("rate").value = p.rate;
   $("rate-out").textContent = `${Number(p.rate).toFixed(2)}×`;
+  $("theme").value = p.theme;
   fillVoices();
-  $("settings").hidden = false;
+  openScreen("settings");
 }
+
+function applyTheme() {
+  const { theme } = prefs.read();
+  if (theme === "system") delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = theme;
+  // La barra de estado del móvil toma el color del fondo
+  const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+  document.querySelector('meta[name="theme-color"]').setAttribute("content", bg);
+}
+$("theme").addEventListener("change", (e) => { prefs.write({ theme: e.target.value }); applyTheme(); });
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
 
 $("btn-settings").addEventListener("click", openSettings);
 $("btn-save-key").addEventListener("click", () => {
@@ -1150,16 +1235,39 @@ $("rate").addEventListener("input", (e) => {
 $("btn-test-voice").addEventListener("click", () => voice.speak("Hi, I'm Sam. What did you do last weekend?"));
 voice.onVoicesChanged(() => { if (!$("settings").hidden) fillVoices(); });
 
+// ================= Avisos de la pantalla de inicio =================
+function refreshNotices() {
+  $("home-setup").hidden = !(ai.mode === "pwa" && !prefs.apiKey());
+  const n = $("home-notice");
+  n.classList.toggle("offline", navigator.onLine === false);
+  if (navigator.onLine === false) n.textContent = "Sin conexión. Sam necesita internet para hablar contigo; tu banco de errores sí se puede consultar.";
+  else if (!voice.canListen) n.textContent = "Este navegador no reconoce voz: podrás escribir. Para hablar, abre la app en Chrome.";
+  else n.textContent = "";
+  n.hidden = !n.textContent;
+}
+$("btn-setup").addEventListener("click", openSettings);
+$("btn-save-key").addEventListener("click", refreshNotices);
+$("btn-clear-key").addEventListener("click", refreshNotices);
+window.addEventListener("online", refreshNotices);
+window.addEventListener("offline", () => {
+  refreshNotices();
+  if (state.phase !== "off") $("status").textContent = "Sin conexión: Sam no podrá contestar hasta que vuelva la red.";
+});
+
 // ================= Arranque =================
+applyTheme();
 setPhase("off");
 detectMode().then((found) => {
   ai = found.ai;
   store = found.store;
   refreshHome();
+  refreshNotices();
   $("mode-chip").textContent = ai.mode === "artifact" ? "Claude" : "API";
-  if (!voice.canListen) $("status").textContent = "Este navegador no reconoce voz: podrás escribir.";
-  else if (ai.mode === "pwa" && !prefs.apiKey()) $("status").textContent = "Antes de empezar, pega tu API key en Ajustes (⚙).";
 });
+
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
 </script>
 </body>
 </html>
