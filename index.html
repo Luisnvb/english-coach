@@ -48,9 +48,23 @@ button:disabled { opacity: .5; cursor: default; }
 .icon-btn { min-width: 48px; min-height: 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-size: 1.3rem; }
 
 #chat { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-block: 16px; overscroll-behavior: contain; }
-.empty { margin: auto 0; display: grid; gap: 8px; color: var(--muted); }
-.empty h2 { font: 700 1.5rem/1.2 var(--display); color: var(--fg); margin: 0; text-wrap: balance; }
-.empty p { margin: 0; max-width: 34ch; }
+/* Inicio: datos arriba, botones grandes abajo para el pulgar */
+.home { flex: 1; display: flex; flex-direction: column; gap: 16px; }
+.home h2 { font: 700 1.5rem/1.2 var(--display); margin: 0; text-wrap: balance; }
+.home .intro { margin: 0; color: var(--muted); max-width: 36ch; }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 2px; }
+.stat b { font: 700 1.8rem/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.stat span { font-size: .85rem; color: var(--muted); }
+.due { margin: 0; padding: 12px 14px; border-radius: 14px; background: var(--fix-bg); color: var(--fix-fg); }
+.home-actions { margin-top: auto; display: grid; gap: 10px; }
+.home-actions button { min-height: 72px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); font: 700 1.15rem/1.2 var(--body); }
+.home-actions button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.goal { padding-block: 8px; background: var(--fix-bg); color: var(--fix-fg); font-size: .92rem; border-bottom: 1px solid var(--line); }
+.goal b { font-weight: 700; }
+.scenario { text-align: left; width: 100%; min-height: 72px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); padding: 12px 14px; display: grid; gap: 2px; }
+.scenario b { font-size: 1.05rem; }
+.scenario span { color: var(--muted); font-size: .92rem; }
 
 .msg { max-width: 88%; padding: 10px 14px; border-radius: 16px; overflow-wrap: anywhere; display: grid; gap: 6px; }
 .msg.tutor { align-self: flex-start; background: var(--tutor); border-bottom-left-radius: 4px; }
@@ -122,14 +136,25 @@ fieldset input, fieldset select { min-height: 48px; border-radius: 10px; border:
     <button id="btn-settings" class="icon-btn" aria-label="Ajustes">⚙</button>
   </header>
 
+  <div id="goal" class="goal pad" hidden></div>
+
   <main id="chat" class="pad" aria-live="polite">
-    <div id="empty" class="empty">
+    <div id="home" class="home">
       <h2>Habla en inglés con Sam</h2>
-      <p>Sam te propone un tema y te contesta en voz alta. Pulsa el micrófono para hablar y otra vez para enviar. Al acabar, pulsa «Terminar» para ver tus errores.</p>
+      <p class="intro">Pulsa el micrófono para hablar y otra vez para enviar. Al acabar, pulsa «Terminar» para ver tus errores.</p>
+      <div class="stats">
+        <div class="stat"><b id="stat-streak">0</b><span>días seguidos</span></div>
+        <div class="stat"><b id="stat-minutes">0</b><span>minutos esta semana</span></div>
+      </div>
+      <p id="home-due" class="due" hidden></p>
+      <div class="home-actions">
+        <button id="btn-free" class="primary">💬 Conversación libre</button>
+        <button id="btn-roleplay">🎭 Role-play</button>
+      </div>
     </div>
   </main>
 
-  <footer class="dock pad">
+  <footer id="dock" class="dock pad" hidden>
     <p id="status" class="status"></p>
     <form id="type-form" hidden>
       <input id="type-input" type="text" autocomplete="off" placeholder="Escribe en inglés…" aria-label="Escribe tu mensaje">
@@ -158,8 +183,19 @@ fieldset input, fieldset select { min-height: 48px; border-radius: 10px; border:
     <p id="sum-saved" class="hint"></p>
     <div class="row">
       <button id="btn-sum-bank">📚 Ver banco de errores</button>
-      <button id="btn-sum-new" class="primary">Nueva conversación</button>
+      <button id="btn-sum-home" class="primary">Volver al inicio</button>
     </div>
+  </div>
+</section>
+
+<section id="scenarios" class="screen" hidden aria-labelledby="h-scenarios">
+  <div class="inner pad">
+    <div class="head">
+      <h2 id="h-scenarios">Elige un role-play</h2>
+      <button class="icon-btn close-screen" aria-label="Cerrar">✕</button>
+    </div>
+    <p class="hint">Sam hace un papel y tú tienes un objetivo. Termina cuando lo consigas o tras unos 8 turnos.</p>
+    <ul id="scenario-list" class="list"></ul>
   </div>
 </section>
 
@@ -236,7 +272,48 @@ Rules:
 - If they write in Spanish, help with the English phrase they need and invite them to say it.
 - Start of session: if REVIEW items are provided, first ask them to say 2-3 of those phrases correctly (give the Spanish meaning or a situation), one at a time, then move to the conversation.`;
 
-const KICKOFF = "(The learner has just opened a new free conversation session. Greet them briefly and propose one everyday topic such as work, travel or their weekend, or invite them to choose their own topic.)";
+const ROLEPLAY_RULES = `ROLE-PLAY: {title}. You play {role}. Setting: {setting}.
+Learner's goal: {goal}.
+Stay in character. Create one small complication. After the goal is reached or ~8 turns, step out of character with: "Great job! Tap Finish to see your summary."`;
+
+const SCENARIOS = [
+  { id: "interview", title: "Job interview", role: "an HR manager at a mid-sized tech company", setting: "a video job interview for an office job",
+    goal: "Introduce yourself and explain one achievement you are proud of",
+    title_es: "Entrevista de trabajo", goal_es: "Preséntate y explica un logro del que estés orgulloso." },
+  { id: "hotel", title: "Hotel check-in", role: "a hotel receptionist", setting: "the front desk of a city-centre hotel in the evening",
+    goal: "Check in, then get moved to a different room because yours is too noisy",
+    title_es: "Hotel", goal_es: "Haz el check-in y consigue que te cambien de habitación por el ruido." },
+  { id: "restaurant", title: "Restaurant", role: "a waiter", setting: "a busy restaurant at dinner time",
+    goal: "Order a meal while explaining a food allergy, then ask for the bill",
+    title_es: "Restaurante", goal_es: "Pide la cena explicando una alergia y luego pide la cuenta." },
+  { id: "doctor", title: "Doctor's appointment", role: "a GP (a female family doctor)", setting: "a short appointment at a local clinic",
+    goal: "Describe your symptoms and make sure you understand the treatment",
+    title_es: "Médico", goal_es: "Describe tus síntomas y asegúrate de entender el tratamiento." },
+  { id: "meeting", title: "Team meeting", role: "a teammate who leads the weekly meeting", setting: "a weekly project meeting at work",
+    goal: "Give an update on your task and ask for more time to finish it",
+    title_es: "Reunión de trabajo", goal_es: "Da una actualización de tu tarea y pide más plazo." },
+  { id: "support", title: "Customer service call", role: "a customer service agent on the phone", setting: "a phone call to an online shop",
+    goal: "Complain about an order that never arrived and get a solution",
+    title_es: "Atención al cliente", goal_es: "Reclama un pedido que no llegó y consigue una solución." },
+];
+
+function roleplayRules(sc) {
+  return ROLEPLAY_RULES.replace("{title}", sc.title).replace("{role}", sc.role)
+    .replace("{setting}", sc.setting).replace("{goal}", sc.goal);
+}
+
+function reviewRules(items) {
+  return "REVIEW items (the learner's past mistakes; ask about them first, one at a time):\n" +
+    items.map((e, i) => `${i + 1}. Correct version: "${e.correct}" (the learner once said: "${e.said}")`).join("\n");
+}
+
+function kickoff(scenario, hasReview) {
+  const greet = "(The learner has just opened a new session. Greet them briefly.";
+  if (scenario && hasReview) return `${greet} First do the REVIEW items, one at a time. After the last one, set the scene in one short sentence and start the role-play in character.)`;
+  if (scenario) return `${greet} Then set the scene of the role-play in one short sentence and say your first line in character.)`;
+  if (hasReview) return `${greet} First do the REVIEW items, one at a time. After the last one, propose one everyday topic for the conversation.)`;
+  return `${greet} Then propose one everyday topic such as work, travel or their weekend, or invite them to choose their own topic.)`;
+}
 
 const SUMMARY_PROMPT = `Analyse this English practice transcript of a B1 Spanish-speaking learner. Reply with ONLY a JSON object:
 {"errors":[{"said":"...","correct":"...","explanation_es":"short explanation in Spanish","type":"grammar|vocabulary|pronunciation|naturalness"}],
@@ -250,7 +327,7 @@ const ERROR_TYPES = ["grammar", "vocabulary", "pronunciation", "naturalness"];
 const TYPE_ES = { grammar: "Gramática", vocabulary: "Vocabulario", pronunciation: "Pronunciación", naturalness: "Poco natural" };
 
 const SUMMARY_SCHEMA = {
-  type: "object", additionalProperties: false, required: ["errors", "phrases", "feedback_es"],
+  type: "object", additionalProperties: false, required: ["errors", "phrases", "feedback_es", "review"],
   properties: {
     errors: { type: "array", items: {
       type: "object", additionalProperties: false, required: ["said", "correct", "explanation_es", "type"],
@@ -261,8 +338,32 @@ const SUMMARY_SCHEMA = {
       properties: { en: { type: "string" }, es: { type: "string" } },
     } },
     feedback_es: { type: "string" },
+    review: { type: "array", items: {
+      type: "object", additionalProperties: false, required: ["id", "correct"],
+      properties: { id: { type: "string" }, correct: { type: "boolean" } },
+    } },
   },
 };
+
+// Si la sesión empezó con repaso, se pide además qué frases dijo bien.
+function buildSummaryPrompt(transcript, review = []) {
+  const block = review.length
+    ? `Also include a "review" array. At the start of the session the tutor asked the learner to say these phrases correctly. For each item the learner actually attempted, add {"id":"<id>","correct":true|false} (correct = they said it right, ignoring transcription glitches). Leave out items they never attempted.
+REVIEW ITEMS:
+${review.map(e => `- id ${e.id}: "${e.correct}"`).join("\n")}
+`
+    : `Also include "review": [].
+`;
+  return SUMMARY_PROMPT.replace("TRANSCRIPT:", block + "TRANSCRIPT:").replace("{transcript}", transcript);
+}
+
+// Cajas de Leitner: días hasta el siguiente repaso según la caja; la 5 es «dominado».
+const BOX_DAYS = { 1: 1, 2: 3, 3: 7, 4: 21 };
+function reviewed(e, ok, today) {
+  const box = ok ? Math.min((e.box || 1) + 1, 5) : 1;
+  return { ...e, box, nextReview: box >= 5 ? null : addDays(today, BOX_DAYS[box]),
+           timesSeen: (e.timesSeen || 1) + 1, timesCorrect: (e.timesCorrect || 0) + (ok ? 1 : 0) };
+}
 
 // ================= Fechas =================
 function isoDay(d = new Date()) {
@@ -419,11 +520,11 @@ const aiApi = {
   turn(rules, messages) {
     return this._call({ model: MODEL_CHAT, max_tokens: 1024, system: rules, messages, output_config: { effort: "low" } });
   },
-  async summary(transcript) {
+  async summary(transcript, review) {
     const text = await this._call({
       model: MODEL_SUMMARY,
       max_tokens: 4000,
-      messages: [{ role: "user", content: SUMMARY_PROMPT.replace("{transcript}", transcript) }],
+      messages: [{ role: "user", content: buildSummaryPrompt(transcript, review) }],
       output_config: { effort: "medium", format: { type: "json_schema", schema: SUMMARY_SCHEMA } },
     });
     return parseJsonLoose(text);
@@ -449,8 +550,8 @@ function makeArtifactAi(sample) {
         return text.trim();
       } catch (e) { throw wrap(e); }
     },
-    async summary(transcript) {
-      try { return await sample.json(SUMMARY_PROMPT.replace("{transcript}", transcript), { modelTier: "default" }); }
+    async summary(transcript, review) {
+      try { return await sample.json(buildSummaryPrompt(transcript, review), { modelTier: "default" }); }
       catch (e) { throw wrap(e); }
     },
   };
@@ -553,7 +654,8 @@ const VOICE_ERR_ES = {
 // ================= Sesión de conversación =================
 const $ = (id) => document.getElementById(id);
 let ai = aiApi, store = localStore;
-const state = { phase: "off", messages: [], turns: 0, startedAt: 0, wakeLock: null };
+const state = { phase: "off", messages: [], turns: 0, startedAt: 0, wakeLock: null,
+                rules: TUTOR_RULES, scenario: null, review: [] };
 
 function splitReply(reply) {
   const lines = reply.split("\n").map(l => l.trim()).filter(Boolean);
@@ -565,7 +667,7 @@ function splitReply(reply) {
 function scrollDown() { const c = $("chat"); c.scrollTop = c.scrollHeight; }
 
 function addBubble(kind, text) {
-  $("empty").hidden = true;
+  $("home").hidden = true;
   const el = document.createElement("div");
   el.className = `msg ${kind}`;
   const p = document.createElement("div");
@@ -619,6 +721,7 @@ function setPhase(phase, status = "") {
   }[phase];
   $("type-form").querySelector("button").disabled = phase === "thinking" || phase === "off";
   $("btn-finish").disabled = phase === "off" || phase === "thinking";
+  $("dock").hidden = phase === "off";
   const tc = $("turn-chip");
   tc.hidden = state.turns === 0;
   tc.textContent = `${state.turns} ${state.turns === 1 ? "turno" : "turnos"}`;
@@ -633,14 +736,17 @@ async function speakAndIdle(text) {
 async function tutorTurn() {
   setPhase("thinking");
   try {
-    const reply = await ai.turn(TUTOR_RULES, state.messages);
+    const reply = await ai.turn(state.rules, state.messages);
     state.messages.push({ role: "assistant", content: reply });
     const { say, fix } = splitReply(reply);
     addTutorBubble(say, fix);
     await speakAndIdle(say);
+    if (state.scenario && /tap finish/i.test(say) && state.phase === "idle") {
+      $("status").textContent = "¡Objetivo cumplido! Pulsa «Terminar» para ver el resumen.";
+    }
   } catch (e) {
     const msg = AI_ERR_ES[e.code] || `Error: ${e.message}`;
-    setPhase(state.messages.length > 1 ? "idle" : "off", "");
+    setPhase("idle", "");
     addError(msg, e.code === "no_key" || e.code === "auth" ? null : tutorTurn);
     if (e.code === "no_key") openSettings();
   }
@@ -660,14 +766,25 @@ function sendUser(text) {
 
 function clearChat() {
   $("chat").querySelectorAll(".msg").forEach(m => m.remove());
-  $("empty").hidden = false;
 }
 
-async function startSession() {
-  state.messages = [{ role: "user", content: KICKOFF }];
+async function startSession(scenario = null) {
+  setPhase("thinking");
+  clearChat();
+  $("home").hidden = true;
+  let review = [];
+  try { review = await store.dueForReview(isoDay()); } catch {}
+  state.scenario = scenario;
+  state.review = review;
+  state.rules = TUTOR_RULES
+    + (scenario ? "\n\n" + roleplayRules(scenario) : "")
+    + (review.length ? "\n\n" + reviewRules(review) : "");
+  state.messages = [{ role: "user", content: kickoff(scenario, review.length > 0) }];
   state.turns = 0;
   state.startedAt = Date.now();
-  clearChat();
+  const goal = $("goal");
+  goal.hidden = !scenario;
+  if (scenario) goal.innerHTML = `<b>🎭 ${scenario.title_es}.</b> Objetivo: ${scenario.goal_es}`;
   try { state.wakeLock = await navigator.wakeLock?.request("screen"); } catch {}
   await tutorTurn();
 }
@@ -675,9 +792,15 @@ async function startSession() {
 function endSession() {
   state.messages = [];
   state.turns = 0;
+  state.scenario = null;
+  state.review = [];
   try { state.wakeLock?.release(); } catch {}
   state.wakeLock = null;
+  clearChat();
+  $("goal").hidden = true;
+  $("home").hidden = false;
   setPhase("off");
+  refreshHome();
 }
 
 async function listen() {
@@ -711,19 +834,33 @@ function cleanSummary(raw) {
     .filter(e => e.said && e.correct).slice(0, 3);
   const phrases = (Array.isArray(raw?.phrases) ? raw.phrases : [])
     .map(p => ({ en: s(p?.en), es: s(p?.es) })).filter(p => p.en).slice(0, 3);
-  return { errors, phrases, feedback_es: s(raw?.feedback_es) };
+  const review = (Array.isArray(raw?.review) ? raw.review : [])
+    .filter(r => r && typeof r.id === "string" && typeof r.correct === "boolean");
+  return { errors, phrases, review, feedback_es: s(raw?.feedback_es) };
+}
+
+// Aplica el resultado del repaso a los errores que se preguntaron al empezar.
+async function recordReview(items, results, today) {
+  const updated = items.flatMap(e => {
+    const r = results.find(x => x.id === e.id);
+    return r ? [reviewed(e, r.correct, today)] : [];
+  });
+  if (updated.length) await store.saveErrors(updated);
+  return updated;
 }
 
 const norm = (t) => t.toLowerCase().replace(/[^a-z0-9' ]+/g, " ").replace(/\s+/g, " ").trim();
 
 // Un error que ya estaba en el banco no se duplica: cuenta como repetido y vuelve a la caja 1.
-async function recordErrors(found, today) {
+// Los que ya se contaron en el repaso de hoy (reviewedIds) no suman otra vez.
+async function recordErrors(found, today, reviewedIds = new Set()) {
   const existing = await store.listErrors();
   const stamp = Date.now().toString(36);
   const saved = found.map((e, i) => {
     const prev = existing.find(x => norm(x.correct) === norm(e.correct) || norm(x.said) === norm(e.said));
     if (prev) return { ...prev, explanation_es: e.explanation_es || prev.explanation_es,
-                       box: 1, nextReview: addDays(today, 1), timesSeen: (prev.timesSeen || 1) + 1 };
+                       box: 1, nextReview: addDays(today, 1),
+                       timesSeen: (prev.timesSeen || 1) + (reviewedIds.has(prev.id) ? 0 : 1) };
     return { id: `e_${today}_${stamp}${i + 1}`, said: e.said, correct: e.correct, explanation_es: e.explanation_es,
              type: e.type, createdAt: today, box: 1, nextReview: addDays(today, 1), timesSeen: 1, timesCorrect: 0 };
   });
@@ -738,7 +875,7 @@ async function finishSession() {
   setPhase("thinking", "Preparando tu resumen…");
   let summary;
   try {
-    summary = cleanSummary(await ai.summary(transcriptText()));
+    summary = cleanSummary(await ai.summary(transcriptText(), state.review));
   } catch (e) {
     setPhase("idle", "");
     addError(AI_ERR_ES[e.code] || `Error: ${e.message}`, e.code === "no_key" || e.code === "auth" ? null : finishSession);
@@ -748,13 +885,18 @@ async function finishSession() {
   const minutes = Math.max(1, Math.round((Date.now() - state.startedAt) / 60000));
   let savedMsg;
   try {
-    const saved = await recordErrors(summary.errors, today);
+    const rev = await recordReview(state.review, summary.review, today);
+    const saved = await recordErrors(summary.errors, today, new Set(rev.map(e => e.id)));
     await store.saveSession({
       id: `s_${today}T${String(now.getHours()).padStart(2, "0")}-${String(now.getMinutes()).padStart(2, "0")}`,
-      date: today, mode: "free", scenario: null, minutes, turns: state.turns,
-      errorIds: saved.map(e => e.id), phrases: summary.phrases,
+      date: today, mode: state.scenario ? "roleplay" : "free", scenario: state.scenario ? state.scenario.id : null,
+      minutes, turns: state.turns, errorIds: saved.map(e => e.id), phrases: summary.phrases,
     });
     savedMsg = saved.length ? `${saved.length} ${saved.length === 1 ? "error guardado" : "errores guardados"} en tu banco.` : "Sin errores nuevos que guardar.";
+    if (rev.length) {
+      const ok = rev.filter(e => e.box > 1).length;
+      savedMsg += ` Repaso: ${ok} de ${rev.length} ${rev.length === 1 ? "frase dicha" : "frases dichas"} bien.`;
+    }
   } catch (e) {
     savedMsg = `No se ha podido guardar: ${e.message}`;
   }
@@ -830,7 +972,8 @@ async function renderBank() {
   for (const e of errors) {
     const li = errorItem(e);
     const meta = document.createElement("div"); meta.className = "meta-line";
-    meta.textContent = `Desde ${e.createdAt} · visto ${e.timesSeen} ${e.timesSeen === 1 ? "vez" : "veces"} · caja ${e.box} · repaso ${e.nextReview}`;
+    meta.textContent = `Desde ${e.createdAt} · visto ${e.timesSeen} ${e.timesSeen === 1 ? "vez" : "veces"} · `
+      + (e.box >= 5 ? "dominado ✓" : `caja ${e.box} · repaso ${e.nextReview}`);
     li.insertBefore(meta, li.querySelector(".actions"));
     const del = document.createElement("button");
     del.className = "del"; del.textContent = "Borrar";
@@ -878,6 +1021,47 @@ $("import-file").addEventListener("change", async (ev) => {
   }
 });
 
+// ================= Inicio =================
+async function refreshHome() {
+  let errors = [], sessions = [];
+  try { [errors, sessions] = await Promise.all([store.listErrors(), store.listSessions()]); } catch {}
+  const today = isoDay();
+  const days = new Set(sessions.map(s => s.date));
+  // La racha sigue viva si hoy aún no has practicado pero ayer sí.
+  let streak = 0, d = days.has(today) ? today : addDays(today, -1);
+  while (days.has(d)) { streak++; d = addDays(d, -1); }
+  const monday = addDays(today, -((new Date().getDay() + 6) % 7));
+  const minutes = sessions.filter(s => s.date >= monday).reduce((a, s) => a + (s.minutes || 0), 0);
+  const due = errors.filter(e => e.box < 5 && e.nextReview && e.nextReview <= today).length;
+  $("stat-streak").textContent = streak;
+  $("stat-minutes").textContent = minutes;
+  const box = $("home-due");
+  box.hidden = due === 0;
+  box.textContent = due === 1
+    ? "Tienes 1 error pendiente de repaso. Sam empezará por él."
+    : `Tienes ${due} errores pendientes de repaso. Sam empezará por ${Math.min(due, 3)} de ellos.`;
+}
+
+function openScenarios() {
+  const list = $("scenario-list");
+  list.innerHTML = "";
+  for (const sc of SCENARIOS) {
+    const li = document.createElement("li");
+    const b = document.createElement("button");
+    b.className = "scenario";
+    const t = document.createElement("b"); t.textContent = sc.title_es;
+    const g = document.createElement("span"); g.textContent = sc.goal_es;
+    b.append(t, g);
+    b.addEventListener("click", () => { $("scenarios").hidden = true; startSession(sc); });
+    li.append(b);
+    list.append(li);
+  }
+  $("scenarios").hidden = false;
+}
+
+$("btn-free").addEventListener("click", () => startSession());
+$("btn-roleplay").addEventListener("click", openScenarios);
+
 // ================= Mandos =================
 $("btn-main").addEventListener("click", () => {
   switch (state.phase) {
@@ -912,7 +1096,7 @@ $("btn-finish").addEventListener("click", () => {
 });
 
 $("btn-sum-bank").addEventListener("click", () => { $("summary").hidden = true; openBank(); });
-$("btn-sum-new").addEventListener("click", () => { $("summary").hidden = true; startSession(); });
+$("btn-sum-home").addEventListener("click", () => { $("summary").hidden = true; });
 $("btn-bank").addEventListener("click", openBank);
 document.querySelectorAll(".close-screen").forEach(b =>
   b.addEventListener("click", () => { b.closest(".screen").hidden = true; voice.stopSpeaking(); }));
@@ -971,6 +1155,7 @@ setPhase("off");
 detectMode().then((found) => {
   ai = found.ai;
   store = found.store;
+  refreshHome();
   $("mode-chip").textContent = ai.mode === "artifact" ? "Claude" : "API";
   if (!voice.canListen) $("status").textContent = "Este navegador no reconoce voz: podrás escribir.";
   else if (ai.mode === "pwa" && !prefs.apiKey()) $("status").textContent = "Antes de empezar, pega tu API key en Ajustes (⚙).";
